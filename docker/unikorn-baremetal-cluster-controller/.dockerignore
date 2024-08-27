@@ -1,0 +1,3 @@
+*
+!bin/*-linux-gnu/unikorn-baremetal-cluster-controller
+!hack/passwd.nonroot

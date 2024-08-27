@@ -1,0 +1,291 @@
+openapi: 3.0.3
+info:
+  title: Baremetal Service API
+  description: |-
+    The Baremetal Service API provides services that allows provisioning and life cycle
+    management of Baremetal clusters. The API is logically composed of authentication
+    services, platform provider specific calls to get a set of resource types that can
+    be then used by abstract Baremetal Service resources to create and manage Baremetal
+    clusters. Requests must specify the HTML content type
+    header.
+  version: 0.1.0
+paths:
+  /api/v1/organizations/{organizationID}/clusters:
+    description: Cluster services.
+    parameters:
+    - $ref: '#/components/parameters/organizationIDParameter'
+    get:
+      description: |-
+        List all clusters within the organization.
+      security:
+      - oauth2Authentication: []
+      responses:
+        '200':
+          $ref: '#/components/responses/baremetalClustersResponse'
+        '400':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/unauthorizedResponse'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/forbiddenResponse'
+        '404':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/notFoundResponse'
+        '500':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/internalServerErrorResponse'
+  /api/v1/organizations/{organizationID}/projects/{projectID}/clusters:
+    x-documentation-group: main
+    description: Cluster services.
+    parameters:
+    - $ref: '#/components/parameters/organizationIDParameter'
+    - $ref: '#/components/parameters/projectIDParameter'
+    post:
+      description: |-
+        Creates a new cluster within the selected cluster manager.
+      security:
+      - oauth2Authentication: []
+      requestBody:
+        $ref: '#/components/requestBodies/createBaremetalClusterRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/baremetalClusterResponse'
+        '400':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/unauthorizedResponse'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/forbiddenResponse'
+        '409':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/conflictResponse'
+        '500':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/internalServerErrorResponse'
+  /api/v1/organizations/{organizationID}/projects/{projectID}/clusters/{clusterID}:
+    x-documentation-group: main
+    description: Cluster services.
+    parameters:
+    - $ref: '#/components/parameters/organizationIDParameter'
+    - $ref: '#/components/parameters/projectIDParameter'
+    - $ref: '#/components/parameters/clusterIDParameter'
+    put:
+      description: |-
+        Update a cluster within the selected cluster manager.
+      security:
+      - oauth2Authentication: []
+      requestBody:
+        $ref: '#/components/requestBodies/createBaremetalClusterRequest'
+      responses:
+        '202':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/acceptedResponse'
+        '400':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/unauthorizedResponse'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/forbiddenResponse'
+        '404':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/notFoundResponse'
+        '500':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/internalServerErrorResponse'
+    delete:
+      description: |-
+        Delete a cluster from within a the selected cluster manager.
+      security:
+      - oauth2Authentication: []
+      responses:
+        '202':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/acceptedResponse'
+        '400':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/unauthorizedResponse'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/forbiddenResponse'
+        '404':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/notFoundResponse'
+        '500':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/internalServerErrorResponse'
+components:
+  parameters:
+    organizationIDParameter:
+      name: organizationID
+      in: path
+      description: |-
+        The organization name.
+      required: true
+      schema:
+        $ref: '#/components/schemas/baremetalNameParameter'
+    projectIDParameter:
+      name: projectID
+      in: path
+      description: |-
+        The project name.
+      required: true
+      schema:
+        $ref: '#/components/schemas/baremetalNameParameter'
+    clusterIDParameter:
+      name: clusterID
+      in: path
+      description: |-
+        The cluster name. Must be a valid DNS containing only lower case characters,
+        numbers or hyphens, start and end with a character or number, and be at most
+        63 characters in length.
+      required: true
+      schema:
+        $ref: '#/components/schemas/baremetalNameParameter'
+  schemas:
+    baremetalNameParameter:
+      description: A Baremetal name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+      type: string
+      minLength: 1
+      maxLength: 63
+    baremetalClusterNetwork:
+      description: A baremetal cluster network settings.
+      type: object
+      properties:
+        nodePrefix:
+          description: Network prefix to provision nodes in. Must be a valid CIDR block.
+          type: string
+        dnsNameservers:
+          description: A list of DNS name server to use.
+          type: array
+          items:
+            description: A DNS nameserver IPv4 address.
+            type: string
+    machinePool:
+      description: A Baremetal cluster machine.
+      type: object
+      properties:
+        replicas:
+          description: Number of machines for a statically sized pool or the maximum
+            for an auto-scaled pool.
+          type: integer
+        flavorId:
+          description: Flavor ID.
+          type: string
+          minLength: 1
+    baremetalClusterWorkloadPool:
+      description: A Kuberntes cluster workload pool.
+      type: object
+      required:
+      - name
+      - machine
+      properties:
+        name:
+          description: Workload pool name.
+          type: string
+        machine:
+          $ref: '#/components/schemas/machinePool'
+    baremetalClusterWorkloadPools:
+      description: A list of Baremetal cluster workload pools.
+      type: array
+      minItems: 1
+      items:
+        $ref: '#/components/schemas/baremetalClusterWorkloadPool'
+    baremetalClusterSpec:
+      description: Baremetal cluster creation parameters.
+      type: object
+      required:
+      - regionId
+      - workloadPools
+      properties:
+        regionId:
+          description: The region to provision the cluster in.
+          type: string
+        workloadPools:
+          $ref: '#/components/schemas/baremetalClusterWorkloadPools'
+    baremetalClusterRead:
+      description: Baremetal cluster read.
+      type: object
+      required:
+      - metadata
+      - spec
+      properties:
+        metadata:
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/schemas/projectScopedResourceReadMetadata'
+        spec:
+          $ref: '#/components/schemas/baremetalClusterSpec'
+    baremetalClusterWrite:
+      description: Baremetal cluster create or update.
+      type: object
+      required:
+      - metadata
+      - spec
+      properties:
+        metadata:
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/schemas/resourceWriteMetadata'
+        spec:
+          $ref: '#/components/schemas/baremetalClusterSpec'
+    baremetalClusters:
+      description: A list of Baremetal clusters.
+      type: array
+      items:
+        $ref: '#/components/schemas/baremetalClusterRead'
+  requestBodies:
+    createBaremetalClusterRequest:
+      description: Baremetal cluster request parameters.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/baremetalClusterWrite'
+          example:
+            metadata:
+              name: cluster
+            spec:
+              regionId: b059b3e6-9ae5-42b7-94b4-f42fb7a6baee
+              workloadPools:
+              - name: default
+                machine:
+                  flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
+                  replicas: 3
+  responses:
+    baremetalClusterResponse:
+      description: A Baremetal cluster.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/baremetalClusterRead'
+          example:
+            metadata:
+              id: c7568e2d-f9ab-453d-9a3a-51375f78426b
+              name: cluster
+              organizationId: d4600d6e-e965-4b44-a808-84fb2fa36702
+              projectId: cae219d7-10e5-4601-8c2c-ee7e066b93ce
+              creationTime: 2023-07-31T10:45:45Z
+              provisioningStatus: provisioned
+            spec:
+              regionId: b059b3e6-9ae5-42b7-94b4-f42fb7a6baee
+              workloadPools:
+              - name: default
+                machine:
+                  flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
+                  replicas: 3
+    baremetalClustersResponse:
+      description: A list of Baremetal clusters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/baremetalClusters'
+          example:
+          - metadata:
+              id: c7568e2d-f9ab-453d-9a3a-51375f78426b
+              name: cluster
+              organizationId: d4600d6e-e965-4b44-a808-84fb2fa36702
+              projectId: cae219d7-10e5-4601-8c2c-ee7e066b93ce
+              creationTime: 2023-07-31T10:45:45Z
+              provisioningStatus: provisioned
+            spec:
+              regionId: b059b3e6-9ae5-42b7-94b4-f42fb7a6baee
+              workloadPools:
+              - name: default
+                machine:
+                  flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
+                  replicas: 3
+  securitySchemes:
+    oauth2Authentication:
+      description: Operation requires OAuth2 bearer token authentication.
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://identity.unikorn-cloud.org/oauth2/v2/authorization
+          tokenUrl: https://identity.unikorn-cloud.org/oauth2/v2/token
+          scopes: {}

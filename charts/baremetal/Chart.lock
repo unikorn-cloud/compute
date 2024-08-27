@@ -1,0 +1,6 @@
+dependencies:
+- name: unikorn-common
+  repository: https://unikorn-cloud.github.io/helm-common
+  version: v0.1.9
+digest: sha256:e29aaa3b715a38da63e6ab2ff2a713b852fab1f51efaf07dacc32f1d9ea5283c
+generated: "2024-08-28T09:53:45.835865889+01:00"

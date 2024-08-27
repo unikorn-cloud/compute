@@ -1,0 +1,39 @@
+run:
+  timeout: 5m
+linters:
+  enable-all: true
+  disable:
+  - exhaustruct
+  - lll
+  - gofumpt
+  - rowserrcheck
+  - sqlclosecheck
+  - wastedassign
+  - forbidigo
+  - wrapcheck
+  - varnamelen
+  - gomnd
+  - ireturn
+  - godox
+  - funlen
+  - predeclared
+  - depguard
+  - goconst
+  - perfsprint
+  - mnd
+linters-settings:
+  gci:
+    sections:
+    - standard
+    - default
+    - prefix(github.com/unikorn-cloud)
+    - prefix(k8s.io)
+    - prefix(sigs.k8s.io)
+    skip-generated: true
+  nlreturn:
+    block-size: 2
+issues:
+  # Too big a change in the context of a module upgrade.
+  exclude:
+  - if-return
+  - unused-parameter

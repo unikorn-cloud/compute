@@ -1,0 +1,3 @@
+*
+!bin/*-linux-gnu/unikorn-baremetal-server
+!hack/passwd.nonroot

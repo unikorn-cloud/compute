@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unikorn-baremetal-server
+  labels:
+    {{- include "unikorn.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unikorn-baremetal-server
+  template:
+    metadata:
+      labels:
+        app: unikorn-baremetal-server
+    spec:
+      containers:
+      - name: unikorn-baremetal-server
+        image: {{ include "unikorn.baremetalServerImage" . }}
+        args:
+        - --namespace={{ .Release.Namespace }}
+        {{- include "unikorn.cors.flags" . | nindent 8 }}
+        {{- include "unikorn.otlp.flags" . | nindent 8 }}
+        {{- include "unikorn.identity.flags" . | nindent 8 }}
+        {{- include "unikorn.region.flags" . | nindent 8 }}
+        ports:
+        - name: http
+          containerPort: 6080
+        - name: prometheus
+          containerPort: 8080
+        - name: pprof
+          containerPort: 6060
+        resources:
+          requests:
+            cpu: "50m"
+            memory: 50Mi
+          limits:
+            cpu: "100m"
+            memory: 100Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+      serviceAccountName: unikorn-baremetal-server
+      securityContext:
+        runAsNonRoot: true
