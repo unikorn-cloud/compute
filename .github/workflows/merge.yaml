@@ -2,29 +2,29 @@ name: Unikorn Merge
 on:
   push:
     branches:
-    - main
+      - main
     tags-ignore:
-    - '*'
+      - "*"
 jobs:
   Coverage:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Setup Go
-      uses: actions/setup-go@v3
-      with:
-        go-version-file: go.mod
-        cache: true
-    - name: Install Helm
-      uses: azure/setup-helm@v3
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: Touch
-      run: make touch
-    - name: Unit Test
-      run: make test-unit
-    - name: Run Codecov
-      uses: codecov/codecov-action@v3
-      env:
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Touch
+        run: make touch
+      - name: Unit Test
+        run: make test-unit
+      - name: Run Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          token: ${{ secrets.CODECOV_TOKEN }}
