@@ -5,30 +5,30 @@
 
 ## Overview
 
-The baremetal service is essentially a cut down version of the [Kubernetes service](https://github.com/unikorn-cloud/kubernetes) that provisions its own baremetal servers using hardware abstraction prvoided by the [Region service](https://github.com/unikorn-cloud/region).
+The baremetal service is essentially a cut down version of the [Kubernetes service](https://github.com/unikorn-cloud/kubernetes) that provisions its own baremetal servers using hardware abstraction provided by the [Region service](https://github.com/unikorn-cloud/region).
 
-Where possible, as the Baremetal service is very similar to the Kubernetes service, we must maintain type and API parity ot ease creation of UX tools and services.
+Where possible, as the Baremetal service is very similar to the Kubernetes service, we must maintain type and API parity to ease creation of UX tools and services.
 
 ## Installation
 
 ### Unikorn Prerequisites
 
-The use the Baremetal service you first need to install:
+To use the Baremetal service you first need to install:
 
-* [The identity service](https://github.com/unikorn-cloud/identity) to provide API authentication and authorization.
-* [The region service](https://github.com/unikorn-cloud/region) to provide provider agnostic cloud services (e.g. images, flavors and identity management).
+- [The identity service](https://github.com/unikorn-cloud/identity) to provide API authentication and authorization.
+- [The region service](https://github.com/unikorn-cloud/region) to provide provider agnostic cloud services (e.g. images, flavors and identity management).
 
 ### Installing the Service
 
 #### Installing Prerequisites
 
 The Unikorn baremetal server component has a couple prerequisites that are required for correct functionality.
-If not installing server you can skip to the next section.
+If not installing the server component, skip to the next section.
 
 You'll need to install:
 
-* cert-manager (used to generate keying material for JWE/JWS and for ingress TLS)
-* nginx-ingress (to perform routing, avoiding CORS, and TLS termination)
+- cert-manager (used to generate keying material for JWE/JWS and for ingress TLS)
+- nginx-ingress (to perform routing, avoiding CORS, and TLS termination)
 
 #### Installing the Baremetal Service
 
@@ -36,7 +36,7 @@ You'll need to install:
 <summary>Helm</summary>
 
 Create a `values.yaml` for the server component:
-A typical `values.yaml` that uses cert-manager and ACME, and external DNS could look like:
+A typical `values.yaml` that uses cert-manager and ACME, and external DNS might look like:
 
 ```yaml
 global:
@@ -51,6 +51,7 @@ global:
 ```shell
 helm install unikorn charts/unikorn --namespace unikorn --create-namespace --values values.yaml
 ```
+
 </details>
 
 <details>
@@ -76,8 +77,9 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-    - CreateNamespace=true
+      - CreateNamespace=true
 ```
+
 </details>
 
 ### Configuring Service Authentication and Authorization
@@ -89,7 +91,7 @@ This service requires asynchronous access to the Unikorn Region API in order to 
 This service defines the `unikorn-baremetal` user that will need to be added to a group in the service organization.
 It will need the built in role `infra-manager-service` that allows:
 
-* Read access to the `region` endpoints to access external networks
-* Read/delete access to the `identites` endpoints to poll and delete cloud identities
-* Read/delete access to the `physicalnetworks` endpoints to poll and delete physical networks
-* Create/Read/Delete access to the `servers` endpoints to manage baremetal instances
+- Read access to the `region` endpoints to access external networks
+- Read/delete access to the `identites` endpoints to poll and delete cloud identities
+- Read/delete access to the `physicalnetworks` endpoints to poll and delete physical networks
+- Create/Read/Delete access to the `servers` endpoints to manage baremetal instances
