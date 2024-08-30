@@ -7,7 +7,7 @@ metadata:
 rules:
 # Orchestrate Unikorn resources (my job).
 - apiGroups:
-  - unikorn-cloud.org
+  - baremetal.unikorn-cloud.org
   resources:
   - baremetalclusters
   verbs:
@@ -17,13 +17,6 @@ rules:
   - watch
   - patch
   - delete
-- apiGroups:
-  - unikorn-cloud.org
-  resources:
-  - regions
-  verbs:
-  - list
-  - watch
 # Find project namespaces
 - apiGroups:
   - ""

@@ -7,7 +7,7 @@ metadata:
 rules:
 # Manage baremetal clusters (my job).
 - apiGroups:
-  - unikorn-cloud.org
+  - baremetal.unikorn-cloud.org
   resources:
   - baremetalclusters
   verbs:
@@ -17,7 +17,7 @@ rules:
   - watch
   - update
 - apiGroups:
-  - unikorn-cloud.org
+  - baremetal.unikorn-cloud.org
   resources:
   - baremetalclusters/status
   verbs:
@@ -29,19 +29,6 @@ rules:
   verbs:
   - list
   - watch
-# ArgoCD integration.
-- apiGroups:
-  - argoproj.io
-  resources:
-  - applications
-  verbs:
-  - create
-  - list
-  - get
-  - watch
-  - patch
-  - delete
-# ArgoCD integration (access to API secret).
 - apiGroups:
   - ""
   resources:
@@ -49,6 +36,3 @@ rules:
   verbs:
   - list
   - watch
-  - create
-  - patch
-  - delete
