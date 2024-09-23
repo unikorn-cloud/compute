@@ -1,6 +1,8 @@
 name: Unikorn Push
 on:
   pull_request:
+    paths-ignore:
+    - "*.md"
     types:
     - opened
     - synchronize
@@ -11,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Setup Go
       uses: actions/setup-go@v3
       with:
@@ -29,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Setup Go
       uses: actions/setup-go@v3
       with:
@@ -50,7 +52,7 @@ jobs:
     - name: Build Generated Code
       run: make generate
     - name: Generated Code Checked In
-      run: '[[ -z $(git status --porcelain) ]]'
+      run: "[[ -z $(git status --porcelain) ]]"
     - name: Unit Test
       run: make test-unit
     - name: Archive code coverage results
