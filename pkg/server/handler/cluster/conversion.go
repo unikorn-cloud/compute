@@ -69,7 +69,7 @@ func newGenerator(client client.Client, options *Options, region regionapi.Clien
 }
 
 // convertMachine converts from a custom resource into the API definition.
-func convertMachine(in *unikornv1.MachineGeneric) *openapi.MachinePool {
+func convertMachine(in *unikornv1core.MachineGeneric) *openapi.MachinePool {
 	machine := &openapi.MachinePool{
 		Replicas: in.Replicas,
 		FlavorId: in.FlavorID,
@@ -151,13 +151,13 @@ func (g *generator) defaultImage(ctx context.Context, request *openapi.Baremetal
 }
 
 // generateNetwork generates the network part of a cluster.
-func (g *generator) generateNetwork() *unikornv1.BaremetalClusterNetworkSpec {
+func (g *generator) generateNetwork() *unikornv1core.NetworkGeneric {
 	// Grab some defaults (as these are in the right format already)
 	// the override with anything coming in from the API, if set.
 	nodeNetwork := g.options.NodeNetwork
 	dnsNameservers := g.options.DNSNameservers
 
-	network := &unikornv1.BaremetalClusterNetworkSpec{
+	network := &unikornv1core.NetworkGeneric{
 		NodeNetwork:    &unikornv1core.IPv4Prefix{IPNet: nodeNetwork},
 		DNSNameservers: unikornv1core.IPv4AddressSliceFromIPSlice(dnsNameservers),
 	}
@@ -166,7 +166,7 @@ func (g *generator) generateNetwork() *unikornv1.BaremetalClusterNetworkSpec {
 }
 
 // generateMachineGeneric generates a generic machine part of the cluster.
-func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi.BaremetalClusterWrite, m *openapi.MachinePool, flavor *regionapi.Flavor) (*unikornv1.MachineGeneric, error) {
+func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi.BaremetalClusterWrite, m *openapi.MachinePool, flavor *regionapi.Flavor) (*unikornv1core.MachineGeneric, error) {
 	if m.Replicas == nil {
 		m.Replicas = util.ToPointer(3)
 	}
@@ -176,7 +176,7 @@ func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi
 		return nil, err
 	}
 
-	machine := &unikornv1.MachineGeneric{
+	machine := &unikornv1core.MachineGeneric{
 		Replicas: m.Replicas,
 		ImageID:  util.ToPointer(image.Metadata.Id),
 		FlavorID: &flavor.Metadata.Id,
