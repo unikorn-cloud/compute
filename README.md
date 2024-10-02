@@ -49,7 +49,7 @@ global:
 ```
 
 ```shell
-helm install unikorn charts/unikorn --namespace unikorn --create-namespace --values values.yaml
+helm install unikorn-baremetal charts/baremetal --namespace unikorn-baremetal --create-namespace --values values.yaml
 ```
 
 </details>
@@ -61,13 +61,13 @@ helm install unikorn charts/unikorn --namespace unikorn --create-namespace --val
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: unikorn
+  name: unikorn-baremetal
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: https://unikorn-cloud.github.io/unikorn
-    chart: unikorn
+    repoURL: https://unikorn-cloud.github.io/baremetal
+    chart: baremetal
     targetRevision: v0.1.0
   destination:
     namespace: unikorn
