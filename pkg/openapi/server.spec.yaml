@@ -1,12 +1,9 @@
 openapi: 3.0.3
 info:
-  title: Baremetal Service API
+  title: Compute Service API
   description: |-
-    The Baremetal Service API provides services that allows provisioning and life cycle
-    management of Baremetal clusters. The API is logically composed of authentication
-    services, platform provider specific calls to get a set of resource types that can
-    be then used by abstract Baremetal Service resources to create and manage Baremetal
-    clusters. Requests must specify the HTML content type
+    The Compute Service API provides services that allows provisioning and life cycle
+    management of Compute clusters. Requests must specify the HTML content type
     header.
   version: 0.1.0
 paths:
@@ -21,7 +18,7 @@ paths:
       - oauth2Authentication: []
       responses:
         '200':
-          $ref: '#/components/responses/baremetalClustersResponse'
+          $ref: '#/components/responses/computeClustersResponse'
         '400':
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
         '401':
@@ -44,10 +41,10 @@ paths:
       security:
       - oauth2Authentication: []
       requestBody:
-        $ref: '#/components/requestBodies/createBaremetalClusterRequest'
+        $ref: '#/components/requestBodies/createComputeClusterRequest'
       responses:
         '202':
-          $ref: '#/components/responses/baremetalClusterResponse'
+          $ref: '#/components/responses/computeClusterResponse'
         '400':
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
         '401':
@@ -71,7 +68,7 @@ paths:
       security:
       - oauth2Authentication: []
       requestBody:
-        $ref: '#/components/requestBodies/createBaremetalClusterRequest'
+        $ref: '#/components/requestBodies/createComputeClusterRequest'
       responses:
         '202':
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/acceptedResponse'
@@ -112,7 +109,7 @@ components:
         The organization name.
       required: true
       schema:
-        $ref: '#/components/schemas/baremetalNameParameter'
+        $ref: '#/components/schemas/computeNameParameter'
     projectIDParameter:
       name: projectID
       in: path
@@ -120,7 +117,7 @@ components:
         The project name.
       required: true
       schema:
-        $ref: '#/components/schemas/baremetalNameParameter'
+        $ref: '#/components/schemas/computeNameParameter'
     clusterIDParameter:
       name: clusterID
       in: path
@@ -130,15 +127,15 @@ components:
         63 characters in length.
       required: true
       schema:
-        $ref: '#/components/schemas/baremetalNameParameter'
+        $ref: '#/components/schemas/computeNameParameter'
   schemas:
-    baremetalNameParameter:
-      description: A Baremetal name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+    computeNameParameter:
+      description: A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
       type: string
       minLength: 1
       maxLength: 63
-    baremetalClusterNetwork:
-      description: A baremetal cluster network settings.
+    computeClusterNetwork:
+      description: A compute cluster network settings.
       type: object
       properties:
         nodePrefix:
@@ -151,7 +148,7 @@ components:
             description: A DNS nameserver IPv4 address.
             type: string
     machinePool:
-      description: A Baremetal cluster machine.
+      description: A Compute cluster machine.
       type: object
       properties:
         replicas:
@@ -162,7 +159,7 @@ components:
           description: Flavor ID.
           type: string
           minLength: 1
-    baremetalClusterWorkloadPool:
+    computeClusterWorkloadPool:
       description: A Kuberntes cluster workload pool.
       type: object
       required:
@@ -174,14 +171,14 @@ components:
           type: string
         machine:
           $ref: '#/components/schemas/machinePool'
-    baremetalClusterWorkloadPools:
-      description: A list of Baremetal cluster workload pools.
+    computeClusterWorkloadPools:
+      description: A list of Compute cluster workload pools.
       type: array
       minItems: 1
       items:
-        $ref: '#/components/schemas/baremetalClusterWorkloadPool'
-    baremetalClusterSpec:
-      description: Baremetal cluster creation parameters.
+        $ref: '#/components/schemas/computeClusterWorkloadPool'
+    computeClusterSpec:
+      description: Compute cluster creation parameters.
       type: object
       required:
       - regionId
@@ -191,9 +188,9 @@ components:
           description: The region to provision the cluster in.
           type: string
         workloadPools:
-          $ref: '#/components/schemas/baremetalClusterWorkloadPools'
-    baremetalClusterRead:
-      description: Baremetal cluster read.
+          $ref: '#/components/schemas/computeClusterWorkloadPools'
+    computeClusterRead:
+      description: Compute cluster read.
       type: object
       required:
       - metadata
@@ -202,9 +199,9 @@ components:
         metadata:
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/schemas/projectScopedResourceReadMetadata'
         spec:
-          $ref: '#/components/schemas/baremetalClusterSpec'
-    baremetalClusterWrite:
-      description: Baremetal cluster create or update.
+          $ref: '#/components/schemas/computeClusterSpec'
+    computeClusterWrite:
+      description: Compute cluster create or update.
       type: object
       required:
       - metadata
@@ -213,20 +210,20 @@ components:
         metadata:
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/schemas/resourceWriteMetadata'
         spec:
-          $ref: '#/components/schemas/baremetalClusterSpec'
-    baremetalClusters:
-      description: A list of Baremetal clusters.
+          $ref: '#/components/schemas/computeClusterSpec'
+    computeClusters:
+      description: A list of Compute clusters.
       type: array
       items:
-        $ref: '#/components/schemas/baremetalClusterRead'
+        $ref: '#/components/schemas/computeClusterRead'
   requestBodies:
-    createBaremetalClusterRequest:
-      description: Baremetal cluster request parameters.
+    createComputeClusterRequest:
+      description: Compute cluster request parameters.
       required: true
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/baremetalClusterWrite'
+            $ref: '#/components/schemas/computeClusterWrite'
           example:
             metadata:
               name: cluster
@@ -238,12 +235,12 @@ components:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
                   replicas: 3
   responses:
-    baremetalClusterResponse:
-      description: A Baremetal cluster.
+    computeClusterResponse:
+      description: A Compute cluster.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/baremetalClusterRead'
+            $ref: '#/components/schemas/computeClusterRead'
           example:
             metadata:
               id: c7568e2d-f9ab-453d-9a3a-51375f78426b
@@ -259,12 +256,12 @@ components:
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
                   replicas: 3
-    baremetalClustersResponse:
-      description: A list of Baremetal clusters.
+    computeClustersResponse:
+      description: A list of Compute clusters.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/baremetalClusters'
+            $ref: '#/components/schemas/computeClusters'
           example:
           - metadata:
               id: c7568e2d-f9ab-453d-9a3a-51375f78426b

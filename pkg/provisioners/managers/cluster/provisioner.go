@@ -24,9 +24,9 @@ import (
 
 	"github.com/spf13/pflag"
 
-	unikornv1 "github.com/unikorn-cloud/baremetal/pkg/apis/unikorn/v1alpha1"
-	"github.com/unikorn-cloud/baremetal/pkg/constants"
-	baremetalprovisioners "github.com/unikorn-cloud/baremetal/pkg/provisioners"
+	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
+	"github.com/unikorn-cloud/compute/pkg/constants"
+	computeprovisioners "github.com/unikorn-cloud/compute/pkg/provisioners"
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
 	coreconstants "github.com/unikorn-cloud/core/pkg/constants"
@@ -78,8 +78,8 @@ func (o *Options) AddFlags(f *pflag.FlagSet) {
 type Provisioner struct {
 	provisioners.Metadata
 
-	// cluster is the baremetal cluster we're provisioning.
-	cluster unikornv1.BaremetalCluster
+	// cluster is the compute cluster we're provisioning.
+	cluster unikornv1.ComputeCluster
 
 	// options are documented for the type.
 	options *Options
@@ -205,7 +205,7 @@ func (p *Provisioner) getPhysicalNetwork(ctx context.Context, client regionapi.C
 	return nil, fmt.Errorf("%w: unhandled status %s", ErrResourceDependency, resource.Metadata.ProvisioningStatus)
 }
 
-func (p *Provisioner) identityOptions(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*baremetalprovisioners.ClusterOpenstackOptions, error) {
+func (p *Provisioner) identityOptions(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*computeprovisioners.ClusterOpenstackOptions, error) {
 	identity, err := p.getIdentity(ctx, client)
 	if err != nil {
 		return nil, err
@@ -216,11 +216,11 @@ func (p *Provisioner) identityOptions(ctx context.Context, client regionapi.Clie
 		return nil, err
 	}
 
-	options := &baremetalprovisioners.ClusterOpenstackOptions{
+	options := &computeprovisioners.ClusterOpenstackOptions{
 		CloudConfig:   *identity.Spec.Openstack.CloudConfig,
 		Cloud:         *identity.Spec.Openstack.Cloud,
 		ServerGroupID: identity.Spec.Openstack.ServerGroupId,
-		ProviderNetwork: &baremetalprovisioners.ClusterOpenstackProviderOptions{
+		ProviderNetwork: &computeprovisioners.ClusterOpenstackProviderOptions{
 			NetworkID: physicalNetwork.Spec.Openstack.NetworkId,
 			SubnetID:  physicalNetwork.Spec.Openstack.SubnetId,
 		},

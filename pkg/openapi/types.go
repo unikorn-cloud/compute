@@ -11,51 +11,51 @@ const (
 	Oauth2AuthenticationScopes = "oauth2Authentication.Scopes"
 )
 
-// BaremetalClusterRead Baremetal cluster read.
-type BaremetalClusterRead struct {
+// ComputeClusterRead Compute cluster read.
+type ComputeClusterRead struct {
 	Metadata externalRef0.ProjectScopedResourceReadMetadata `json:"metadata"`
 
-	// Spec Baremetal cluster creation parameters.
-	Spec BaremetalClusterSpec `json:"spec"`
+	// Spec Compute cluster creation parameters.
+	Spec ComputeClusterSpec `json:"spec"`
 }
 
-// BaremetalClusterSpec Baremetal cluster creation parameters.
-type BaremetalClusterSpec struct {
+// ComputeClusterSpec Compute cluster creation parameters.
+type ComputeClusterSpec struct {
 	// RegionId The region to provision the cluster in.
 	RegionId string `json:"regionId"`
 
-	// WorkloadPools A list of Baremetal cluster workload pools.
-	WorkloadPools BaremetalClusterWorkloadPools `json:"workloadPools"`
+	// WorkloadPools A list of Compute cluster workload pools.
+	WorkloadPools ComputeClusterWorkloadPools `json:"workloadPools"`
 }
 
-// BaremetalClusterWorkloadPool A Kuberntes cluster workload pool.
-type BaremetalClusterWorkloadPool struct {
-	// Machine A Baremetal cluster machine.
+// ComputeClusterWorkloadPool A Kuberntes cluster workload pool.
+type ComputeClusterWorkloadPool struct {
+	// Machine A Compute cluster machine.
 	Machine MachinePool `json:"machine"`
 
 	// Name Workload pool name.
 	Name string `json:"name"`
 }
 
-// BaremetalClusterWorkloadPools A list of Baremetal cluster workload pools.
-type BaremetalClusterWorkloadPools = []BaremetalClusterWorkloadPool
+// ComputeClusterWorkloadPools A list of Compute cluster workload pools.
+type ComputeClusterWorkloadPools = []ComputeClusterWorkloadPool
 
-// BaremetalClusterWrite Baremetal cluster create or update.
-type BaremetalClusterWrite struct {
+// ComputeClusterWrite Compute cluster create or update.
+type ComputeClusterWrite struct {
 	// Metadata Resource metadata valid for all API resource reads and writes.
 	Metadata externalRef0.ResourceWriteMetadata `json:"metadata"`
 
-	// Spec Baremetal cluster creation parameters.
-	Spec BaremetalClusterSpec `json:"spec"`
+	// Spec Compute cluster creation parameters.
+	Spec ComputeClusterSpec `json:"spec"`
 }
 
-// BaremetalClusters A list of Baremetal clusters.
-type BaremetalClusters = []BaremetalClusterRead
+// ComputeClusters A list of Compute clusters.
+type ComputeClusters = []ComputeClusterRead
 
-// BaremetalNameParameter A Baremetal name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type BaremetalNameParameter = string
+// ComputeNameParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+type ComputeNameParameter = string
 
-// MachinePool A Baremetal cluster machine.
+// MachinePool A Compute cluster machine.
 type MachinePool struct {
 	// FlavorId Flavor ID.
 	FlavorId *string `json:"flavorId,omitempty"`
@@ -64,26 +64,26 @@ type MachinePool struct {
 	Replicas *int `json:"replicas,omitempty"`
 }
 
-// ClusterIDParameter A Baremetal name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type ClusterIDParameter = BaremetalNameParameter
+// ClusterIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+type ClusterIDParameter = ComputeNameParameter
 
-// OrganizationIDParameter A Baremetal name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type OrganizationIDParameter = BaremetalNameParameter
+// OrganizationIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+type OrganizationIDParameter = ComputeNameParameter
 
-// ProjectIDParameter A Baremetal name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type ProjectIDParameter = BaremetalNameParameter
+// ProjectIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+type ProjectIDParameter = ComputeNameParameter
 
-// BaremetalClusterResponse Baremetal cluster read.
-type BaremetalClusterResponse = BaremetalClusterRead
+// ComputeClusterResponse Compute cluster read.
+type ComputeClusterResponse = ComputeClusterRead
 
-// BaremetalClustersResponse A list of Baremetal clusters.
-type BaremetalClustersResponse = BaremetalClusters
+// ComputeClustersResponse A list of Compute clusters.
+type ComputeClustersResponse = ComputeClusters
 
-// CreateBaremetalClusterRequest Baremetal cluster create or update.
-type CreateBaremetalClusterRequest = BaremetalClusterWrite
+// CreateComputeClusterRequest Compute cluster create or update.
+type CreateComputeClusterRequest = ComputeClusterWrite
 
 // PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersJSONRequestBody defines body for PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters for application/json ContentType.
-type PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersJSONRequestBody = BaremetalClusterWrite
+type PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersJSONRequestBody = ComputeClusterWrite
 
 // PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody defines body for PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID for application/json ContentType.
-type PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody = BaremetalClusterWrite
+type PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody = ComputeClusterWrite

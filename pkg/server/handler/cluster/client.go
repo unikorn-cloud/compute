@@ -25,9 +25,9 @@ import (
 
 	"github.com/spf13/pflag"
 
-	unikornv1 "github.com/unikorn-cloud/baremetal/pkg/apis/unikorn/v1alpha1"
-	"github.com/unikorn-cloud/baremetal/pkg/openapi"
-	"github.com/unikorn-cloud/baremetal/pkg/server/handler/common"
+	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
+	"github.com/unikorn-cloud/compute/pkg/openapi"
+	"github.com/unikorn-cloud/compute/pkg/server/handler/common"
 	"github.com/unikorn-cloud/core/pkg/constants"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
@@ -83,8 +83,8 @@ func NewClient(client client.Client, namespace string, options *Options, region 
 }
 
 // List returns all clusters owned by the implicit control plane.
-func (c *Client) List(ctx context.Context, organizationID string) (openapi.BaremetalClusters, error) {
-	result := &unikornv1.BaremetalClusterList{}
+func (c *Client) List(ctx context.Context, organizationID string) (openapi.ComputeClusters, error) {
+	result := &unikornv1.ComputeClusterList{}
 
 	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
 	if err != nil {
@@ -102,7 +102,7 @@ func (c *Client) List(ctx context.Context, organizationID string) (openapi.Barem
 		return nil, errors.OAuth2ServerError("failed to list clusters").WithError(err)
 	}
 
-	slices.SortStableFunc(result.Items, func(a, b unikornv1.BaremetalCluster) int {
+	slices.SortStableFunc(result.Items, func(a, b unikornv1.ComputeCluster) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 
@@ -110,8 +110,8 @@ func (c *Client) List(ctx context.Context, organizationID string) (openapi.Barem
 }
 
 // get returns the cluster.
-func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikornv1.BaremetalCluster, error) {
-	result := &unikornv1.BaremetalCluster{}
+func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikornv1.ComputeCluster, error) {
+	result := &unikornv1.ComputeCluster{}
 
 	if err := c.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: clusterID}, result); err != nil {
 		if kerrors.IsNotFound(err) {
@@ -127,15 +127,15 @@ func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikorn
 func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, regionID, clusterID string) (*regionapi.IdentityRead, error) {
 	tags := regionapi.TagList{
 		regionapi.Tag{
-			Name:  constants.BaremetalClusterLabel,
+			Name:  constants.ComputeClusterLabel,
 			Value: clusterID,
 		},
 	}
 
 	request := regionapi.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesJSONRequestBody{
 		Metadata: coreapi.ResourceWriteMetadata{
-			Name:        "baremetal-cluster-" + clusterID,
-			Description: util.ToPointer("Identity for Baremetal cluster " + clusterID),
+			Name:        "compute-cluster-" + clusterID,
+			Description: util.ToPointer("Identity for Compute cluster " + clusterID),
 		},
 		Spec: regionapi.IdentityWriteSpec{
 			RegionId: regionID,
@@ -155,10 +155,10 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 	return resp.JSON201, nil
 }
 
-func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizationID, projectID string, cluster *unikornv1.BaremetalCluster, identity *regionapi.IdentityRead) (*regionapi.PhysicalNetworkRead, error) {
+func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizationID, projectID string, cluster *unikornv1.ComputeCluster, identity *regionapi.IdentityRead) (*regionapi.PhysicalNetworkRead, error) {
 	tags := regionapi.TagList{
 		regionapi.Tag{
-			Name:  constants.BaremetalClusterLabel,
+			Name:  constants.ComputeClusterLabel,
 			Value: cluster.Name,
 		},
 	}
@@ -171,7 +171,7 @@ func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizatio
 
 	request := regionapi.PhysicalNetworkWrite{
 		Metadata: coreapi.ResourceWriteMetadata{
-			Name:        "baremetal-cluster-" + cluster.Name,
+			Name:        "compute-cluster-" + cluster.Name,
 			Description: util.ToPointer("Physical network for cluster " + cluster.Name),
 		},
 		Spec: &regionapi.PhysicalNetworkWriteSpec{
@@ -217,7 +217,7 @@ func (c *Client) getRegion(ctx context.Context, organizationID, regionID string)
 	return &results[index], nil
 }
 
-func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizationID, projectID, regionID string, identity *regionapi.IdentityRead, cluster *unikornv1.BaremetalCluster) error {
+func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizationID, projectID, regionID string, identity *regionapi.IdentityRead, cluster *unikornv1.ComputeCluster) error {
 	// Save the identity ID for later cleanup.
 	if cluster.Annotations == nil {
 		cluster.Annotations = map[string]string{}
@@ -233,7 +233,7 @@ func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizati
 
 	// Provision a vlan physical network for bare-metal nodes to attach to.
 	// For now, do this for everything, given you may start with a VM only cluster
-	// and suddely want some baremetal nodes.  CAPO won't allow you to change
+	// and suddely want some compute nodes.  CAPO won't allow you to change
 	// networks, so play it safe.  Please note that the cluster controller will
 	// automatically discover the physical network, so we don't need an annotation.
 	if region.Spec.Features.PhysicalNetworks {
@@ -249,7 +249,7 @@ func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizati
 }
 
 // Create creates the implicit cluster indentified by the JTW claims.
-func (c *Client) Create(ctx context.Context, organizationID, projectID string, request *openapi.BaremetalClusterWrite) (*openapi.BaremetalClusterRead, error) {
+func (c *Client) Create(ctx context.Context, organizationID, projectID string, request *openapi.ComputeClusterWrite) (*openapi.ComputeClusterRead, error) {
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
 	if err != nil {
 		return nil, err
@@ -287,7 +287,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 		return errors.OAuth2InvalidRequest("control plane is being deleted")
 	}
 
-	cluster := &unikornv1.BaremetalCluster{
+	cluster := &unikornv1.ComputeCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clusterID,
 			Namespace: namespace.Name,
@@ -306,7 +306,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 }
 
 // Update implements read/modify/write for the cluster.
-func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterID string, request *openapi.BaremetalClusterWrite) error {
+func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterID string, request *openapi.ComputeClusterWrite) error {
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
 	if err != nil {
 		return err

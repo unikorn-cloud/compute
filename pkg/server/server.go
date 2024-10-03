@@ -27,9 +27,9 @@ import (
 	"github.com/spf13/pflag"
 	"go.opentelemetry.io/otel/sdk/trace"
 
-	"github.com/unikorn-cloud/baremetal/pkg/constants"
-	"github.com/unikorn-cloud/baremetal/pkg/openapi"
-	"github.com/unikorn-cloud/baremetal/pkg/server/handler"
+	"github.com/unikorn-cloud/compute/pkg/constants"
+	"github.com/unikorn-cloud/compute/pkg/openapi"
+	"github.com/unikorn-cloud/compute/pkg/server/handler"
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
 	"github.com/unikorn-cloud/core/pkg/manager/otel"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"

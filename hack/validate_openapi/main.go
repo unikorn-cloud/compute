@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/unikorn-cloud/baremetal/pkg/openapi"
+	"github.com/unikorn-cloud/compute/pkg/openapi"
 )
 
 //nolint:gochecknoglobals

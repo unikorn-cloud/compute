@@ -21,8 +21,8 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/unikorn-cloud/baremetal/pkg/openapi"
-	"github.com/unikorn-cloud/baremetal/pkg/server/handler/cluster"
+	"github.com/unikorn-cloud/compute/pkg/openapi"
+	"github.com/unikorn-cloud/compute/pkg/server/handler/cluster"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/core/pkg/server/util"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
@@ -33,7 +33,7 @@ import (
 )
 
 type Handler struct {
-	// client gives cached access to Baremetal.
+	// client gives cached access to Compute.
 	client client.Client
 
 	// namespace is where the controller is running.
@@ -81,8 +81,8 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWri
 		return
 	}
 
-	result = slices.DeleteFunc(result, func(resource openapi.BaremetalClusterRead) bool {
-		return rbac.AllowProjectScope(r.Context(), "baremetalclusters", identityapi.Read, organizationID, resource.Metadata.ProjectId) != nil
+	result = slices.DeleteFunc(result, func(resource openapi.ComputeClusterRead) bool {
+		return rbac.AllowProjectScope(r.Context(), "computeclusters", identityapi.Read, organizationID, resource.Metadata.ProjectId) != nil
 	})
 
 	h.setUncacheable(w)
@@ -90,12 +90,12 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWri
 }
 
 func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter) {
-	if err := rbac.AllowProjectScope(r.Context(), "baremetalclusters", identityapi.Create, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScope(r.Context(), "computeclusters", identityapi.Create, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
 
-	request := &openapi.BaremetalClusterWrite{}
+	request := &openapi.ComputeClusterWrite{}
 
 	if err := util.ReadJSONBody(r, request); err != nil {
 		errors.HandleError(w, r, err)
@@ -119,7 +119,7 @@ func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(
 }
 
 func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.ClusterIDParameter) {
-	if err := rbac.AllowProjectScope(r.Context(), "baremetalclusters", identityapi.Delete, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScope(r.Context(), "computeclusters", identityapi.Delete, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -140,12 +140,12 @@ func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDCluster
 }
 
 func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.ClusterIDParameter) {
-	if err := rbac.AllowProjectScope(r.Context(), "baremetalclusters", identityapi.Update, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScope(r.Context(), "computeclusters", identityapi.Update, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
 
-	request := &openapi.BaremetalClusterWrite{}
+	request := &openapi.ComputeClusterWrite{}
 
 	if err := util.ReadJSONBody(r, request); err != nil {
 		errors.HandleError(w, r, err)

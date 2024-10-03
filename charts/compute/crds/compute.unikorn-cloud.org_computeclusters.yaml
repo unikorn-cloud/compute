@@ -1,0 +1,195 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.3
+  name: computeclusters.compute.unikorn-cloud.org
+spec:
+  group: compute.unikorn-cloud.org
+  names:
+    categories:
+    - unikorn
+    kind: ComputeCluster
+    listKind: ComputeClusterList
+    plural: computeclusters
+    singular: computecluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.labels['unikorn-cloud\.org/name']
+      name: display name
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Available")].reason
+      name: status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          ComputeCluster is an object representing a Compute cluster.
+          For now, this is a monolith for simplicity.  In future it may reference
+          a provider specific implementation e.g. if CAPI goes out of favour for
+          some other new starlet.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ComputeClusterSpec defines the requested state of the Compute
+              cluster.
+            properties:
+              network:
+                description: Network defines the Compute networking.
+                properties:
+                  dnsNameservers:
+                    description: DNSNameservers sets the DNS nameservers for hosts
+                      on the network.
+                    items:
+                      pattern: ^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])$
+                      type: string
+                    minItems: 1
+                    type: array
+                    x-kubernetes-list-type: set
+                  nodeNetwork:
+                    description: |-
+                      NodeNetwork is the IPv4 prefix for the node network.
+                      This is tyically used to populate a physical network address range.
+                    pattern: ^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\/(?:3[0-2]|[1-2]?[0-9])$
+                    type: string
+                required:
+                - dnsNameservers
+                - nodeNetwork
+                type: object
+              pause:
+                description: Pause, if true, will inhibit reconciliation.
+                type: boolean
+              regionId:
+                description: Region to provision the cluster in.
+                type: string
+              workloadPools:
+                description: WorkloadPools defines the workload cluster topology.
+                properties:
+                  pools:
+                    description: |-
+                      Pools contains an inline set of pools.  This field will be ignored
+                      when Selector is set.  Inline pools are expected to be used for UI
+                      generated clusters.
+                    items:
+                      properties:
+                        diskSize:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: |-
+                            DiskSize is the persistent root disk size to deploy with.  This
+                            overrides the default ephemeral disk size defined in the flavor.
+                            This is irrelevant for baremetal machine flavors.
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        flavorId:
+                          description: Flavor is the regions service flavor to deploy
+                            with.
+                          type: string
+                        imageId:
+                          description: Image is the region service image to deploy
+                            with.
+                          type: string
+                        name:
+                          description: Name is the name of the pool.
+                          type: string
+                        replicas:
+                          default: 3
+                          description: Replicas is the initial pool size to deploy.
+                          minimum: 0
+                          type: integer
+                      required:
+                      - flavorId
+                      - imageId
+                      - name
+                      type: object
+                    type: array
+                type: object
+            required:
+            - network
+            - regionId
+            - workloadPools
+            type: object
+          status:
+            description: ComputeClusterStatus defines the observed state of the Compute
+              cluster.
+            properties:
+              conditions:
+                description: Current service state of a Compute cluster.
+                items:
+                  description: |-
+                    Condition is a generic condition type for use across all resource types.
+                    It's generic so that the underlying controller-manager functionality can
+                    be shared across all resources.
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human-readable message indicating details about
+                        last transition.
+                      type: string
+                    reason:
+                      description: Unique, one-word, CamelCase reason for the condition's
+                        last transition.
+                      enum:
+                      - Provisioning
+                      - Provisioned
+                      - Cancelled
+                      - Errored
+                      - Deprovisioning
+                      - Deprovisioned
+                      type: string
+                    status:
+                      description: |-
+                        Status is the status of the condition.
+                        Can be True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type is the type of the condition.
+                      enum:
+                      - Available
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              namespace:
+                description: Namespace defines the namespace a cluster resides in.
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
