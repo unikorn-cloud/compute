@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: unikorn-compute-server
+  labels:
+    {{- include "unikorn.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: unikorn-compute-server
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+  - name: prometheus
+    port: 8080
+    targetPort: prometheus

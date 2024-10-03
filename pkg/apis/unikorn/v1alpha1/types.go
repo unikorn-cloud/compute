@@ -22,23 +22,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// BaremetalWorkloadPoolSpec defines the requested machine pool
+// ComputeWorkloadPoolSpec defines the requested machine pool
 // state.
-type BaremetalWorkloadPoolSpec struct {
+type ComputeWorkloadPoolSpec struct {
 	unikornv1core.MachineGeneric `json:",inline"`
 	// Name is the name of the pool.
 	Name string `json:"name"`
 }
 
-// BaremetalClusterList is a typed list of baremetal clusters.
+// ComputeClusterList is a typed list of compute clusters.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type BaremetalClusterList struct {
+type ComputeClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []BaremetalCluster `json:"items"`
+	Items           []ComputeCluster `json:"items"`
 }
 
-// BaremetalCluster is an object representing a Baremetal cluster.
+// ComputeCluster is an object representing a Compute cluster.
 // For now, this is a monolith for simplicity.  In future it may reference
 // a provider specific implementation e.g. if CAPI goes out of favour for
 // some other new starlet.
@@ -49,41 +49,41 @@ type BaremetalClusterList struct {
 // +kubebuilder:printcolumn:name="display name",type="string",JSONPath=".metadata.labels['unikorn-cloud\\.org/name']"
 // +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.conditions[?(@.type==\"Available\")].reason"
 // +kubebuilder:printcolumn:name="age",type="date",JSONPath=".metadata.creationTimestamp"
-type BaremetalCluster struct {
+type ComputeCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              BaremetalClusterSpec   `json:"spec"`
-	Status            BaremetalClusterStatus `json:"status,omitempty"`
+	Spec              ComputeClusterSpec   `json:"spec"`
+	Status            ComputeClusterStatus `json:"status,omitempty"`
 }
 
-// BaremetalClusterSpec defines the requested state of the Baremetal cluster.
-type BaremetalClusterSpec struct {
+// ComputeClusterSpec defines the requested state of the Compute cluster.
+type ComputeClusterSpec struct {
 	// Pause, if true, will inhibit reconciliation.
 	Pause bool `json:"pause,omitempty"`
 	// Region to provision the cluster in.
 	RegionID string `json:"regionId"`
-	// Network defines the Baremetal networking.
+	// Network defines the Compute networking.
 	Network *unikornv1core.NetworkGeneric `json:"network"`
 	// WorkloadPools defines the workload cluster topology.
-	WorkloadPools *BaremetalClusterWorkloadPoolsSpec `json:"workloadPools"`
+	WorkloadPools *ComputeClusterWorkloadPoolsSpec `json:"workloadPools"`
 }
 
-type BaremetalClusterWorkloadPoolsPoolSpec struct {
-	BaremetalWorkloadPoolSpec `json:",inline"`
+type ComputeClusterWorkloadPoolsPoolSpec struct {
+	ComputeWorkloadPoolSpec `json:",inline"`
 }
 
-type BaremetalClusterWorkloadPoolsSpec struct {
+type ComputeClusterWorkloadPoolsSpec struct {
 	// Pools contains an inline set of pools.  This field will be ignored
 	// when Selector is set.  Inline pools are expected to be used for UI
 	// generated clusters.
-	Pools []BaremetalClusterWorkloadPoolsPoolSpec `json:"pools,omitempty"`
+	Pools []ComputeClusterWorkloadPoolsPoolSpec `json:"pools,omitempty"`
 }
 
-// BaremetalClusterStatus defines the observed state of the Baremetal cluster.
-type BaremetalClusterStatus struct {
+// ComputeClusterStatus defines the observed state of the Compute cluster.
+type ComputeClusterStatus struct {
 	// Namespace defines the namespace a cluster resides in.
 	Namespace string `json:"namespace,omitempty"`
 
-	// Current service state of a Baremetal cluster.
+	// Current service state of a Compute cluster.
 	Conditions []unikornv1core.Condition `json:"conditions,omitempty"`
 }

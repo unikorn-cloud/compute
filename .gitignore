@@ -1,7 +1,7 @@
 /bin
 /sboms
-/charts/kubernetes/Chart.lock
-/charts/kubernetes/charts
+/charts/compute/Chart.lock
+/charts/compute/charts
 *.swp
 cover.out
 cover.html

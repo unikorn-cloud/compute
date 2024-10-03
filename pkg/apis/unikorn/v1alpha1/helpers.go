@@ -37,26 +37,26 @@ var (
 )
 
 // Paused implements the ReconcilePauser interface.
-func (c *BaremetalCluster) Paused() bool {
+func (c *ComputeCluster) Paused() bool {
 	return c.Spec.Pause
 }
 
 // StatusConditionRead scans the status conditions for an existing condition whose type
 // matches.
-func (c *BaremetalCluster) StatusConditionRead(t unikornv1core.ConditionType) (*unikornv1core.Condition, error) {
+func (c *ComputeCluster) StatusConditionRead(t unikornv1core.ConditionType) (*unikornv1core.Condition, error) {
 	return unikornv1core.GetCondition(c.Status.Conditions, t)
 }
 
 // StatusConditionWrite either adds or updates a condition in the cluster status.
 // If the condition, status and message match an existing condition the update is
 // ignored.
-func (c *BaremetalCluster) StatusConditionWrite(t unikornv1core.ConditionType, status corev1.ConditionStatus, reason unikornv1core.ConditionReason, message string) {
+func (c *ComputeCluster) StatusConditionWrite(t unikornv1core.ConditionType, status corev1.ConditionStatus, reason unikornv1core.ConditionReason, message string) {
 	unikornv1core.UpdateCondition(&c.Status.Conditions, t, status, reason, message)
 }
 
 // ResourceLabels generates a set of labels to uniquely identify the resource
 // if it were to be placed in a single global namespace.
-func (c *BaremetalCluster) ResourceLabels() (labels.Set, error) {
+func (c *ComputeCluster) ResourceLabels() (labels.Set, error) {
 	organization, ok := c.Labels[constants.OrganizationLabel]
 	if !ok {
 		return nil, ErrMissingLabel
@@ -68,10 +68,10 @@ func (c *BaremetalCluster) ResourceLabels() (labels.Set, error) {
 	}
 
 	labels := labels.Set{
-		constants.KindLabel:             constants.KindLabelValueBaremetalCluster,
-		constants.OrganizationLabel:     organization,
-		constants.ProjectLabel:          project,
-		constants.BaremetalClusterLabel: c.Name,
+		constants.KindLabel:           constants.KindLabelValueComputeCluster,
+		constants.OrganizationLabel:   organization,
+		constants.ProjectLabel:        project,
+		constants.ComputeClusterLabel: c.Name,
 	}
 
 	return labels, nil

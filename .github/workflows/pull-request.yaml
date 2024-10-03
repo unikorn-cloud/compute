@@ -44,11 +44,11 @@ jobs:
     - name: Touch
       run: make touch
     - name: Build Helm Chart
-      run: helm dependency update charts/baremetal
+      run: helm dependency update charts/compute
     - name: Golang CI/Helm Lint
       run: make lint
     - name: Build Images
-      run: make charts/baremetal/crds images
+      run: make charts/compute/crds images
     - name: Build Generated Code
       run: make generate
     - name: Generated Code Checked In

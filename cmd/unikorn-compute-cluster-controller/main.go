@@ -14,6 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// +k8s:deepcopy-gen=package,register
-// +groupName=compute.unikorn-cloud.org
-package v1alpha1
+package main
+
+import (
+	"github.com/unikorn-cloud/compute/pkg/managers/cluster"
+	"github.com/unikorn-cloud/core/pkg/manager"
+)
+
+func main() {
+	manager.Run(&cluster.Factory{})
+}

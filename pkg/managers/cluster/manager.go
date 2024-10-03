@@ -17,9 +17,9 @@ limitations under the License.
 package cluster
 
 import (
-	unikornv1 "github.com/unikorn-cloud/baremetal/pkg/apis/unikorn/v1alpha1"
-	"github.com/unikorn-cloud/baremetal/pkg/constants"
-	"github.com/unikorn-cloud/baremetal/pkg/provisioners/managers/cluster"
+	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
+	"github.com/unikorn-cloud/compute/pkg/constants"
+	"github.com/unikorn-cloud/compute/pkg/provisioners/managers/cluster"
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
 	coremanager "github.com/unikorn-cloud/core/pkg/manager"
 	"github.com/unikorn-cloud/core/pkg/manager/options"
@@ -56,7 +56,7 @@ func (*Factory) Reconciler(options *options.Options, controlerOptions coremanage
 // RegisterWatches adds any watches that would trigger a reconcile.
 func (*Factory) RegisterWatches(manager manager.Manager, controller controller.Controller) error {
 	// Any changes to the cluster spec, trigger a reconcile.
-	if err := controller.Watch(source.Kind(manager.GetCache(), &unikornv1.BaremetalCluster{}, &handler.TypedEnqueueRequestForObject[*unikornv1.BaremetalCluster]{}, &predicate.TypedGenerationChangedPredicate[*unikornv1.BaremetalCluster]{})); err != nil {
+	if err := controller.Watch(source.Kind(manager.GetCache(), &unikornv1.ComputeCluster{}, &handler.TypedEnqueueRequestForObject[*unikornv1.ComputeCluster]{}, &predicate.TypedGenerationChangedPredicate[*unikornv1.ComputeCluster]{})); err != nil {
 		return err
 	}
 

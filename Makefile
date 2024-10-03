@@ -11,8 +11,8 @@ REVISION := $(shell git rev-parse HEAD)
 # for your host's architecture.  The latter are going to run in Kubernetes, so
 # want to be amd64.
 CONTROLLERS = \
-  unikorn-baremetal-cluster-controller\
-  unikorn-baremetal-server \
+  unikorn-compute-cluster-controller\
+  unikorn-compute-server \
 
 # Release will do cross compliation of all images for the 'all' target.
 # Note we aren't fucking about with docker here because that opens up a
@@ -37,7 +37,7 @@ BINDIR = bin
 CMDDIR = cmd
 SRCDIR = src
 GENDIR = generated
-CRDDIR = charts/baremetal/crds
+CRDDIR = charts/compute/crds
 
 # Where to install things.
 PREFIX = $(HOME)/bin
@@ -82,7 +82,7 @@ MOCKGEN_VERSION=v0.3.0
 
 # This is the base directory to generate kubernetes API primitives from e.g.
 # clients and CRDs.
-GENAPIBASE = github.com/unikorn-cloud/baremetal/pkg/apis
+GENAPIBASE = github.com/unikorn-cloud/compute/pkg/apis
 
 # This is the list of APIs to generate clients for.
 GENAPIS = $(GENAPIBASE)/unikorn/v1alpha1
@@ -187,7 +187,7 @@ touch:
 lint: $(GENDIR)
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(LINT_VERSION)
 	$(GOBIN)/golangci-lint run --timeout=10m ./...
-	helm lint --strict charts/baremetal
+	helm lint --strict charts/compute
 
 # Validate the server OpenAPI schema is legit.
 .PHONY: validate

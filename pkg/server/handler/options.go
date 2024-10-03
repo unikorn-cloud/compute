@@ -21,7 +21,7 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/unikorn-cloud/baremetal/pkg/server/handler/cluster"
+	"github.com/unikorn-cloud/compute/pkg/server/handler/cluster"
 )
 
 // Options defines configurable handler options.

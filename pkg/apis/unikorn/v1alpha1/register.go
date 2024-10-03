@@ -24,7 +24,7 @@ import (
 
 const (
 	// GroupName is the Kubernetes API group our resources belong to.
-	GroupName = "baremetal.unikorn-cloud.org"
+	GroupName = "compute.unikorn-cloud.org"
 	// GroupVersion is the version of our custom resources.
 	GroupVersion = "v1alpha1"
 	// Group is group/version of our resources.
@@ -47,7 +47,7 @@ var (
 
 //nolint:gochecknoinits
 func init() {
-	SchemeBuilder.Register(&BaremetalCluster{}, &BaremetalClusterList{})
+	SchemeBuilder.Register(&ComputeCluster{}, &ComputeClusterList{})
 }
 
 // Resource maps a resource type to a group resource.

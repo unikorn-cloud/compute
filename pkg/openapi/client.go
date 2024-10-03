@@ -439,7 +439,7 @@ type ClientWithResponsesInterface interface {
 type GetApiV1OrganizationsOrganizationIDClustersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *BaremetalClustersResponse
+	JSON200      *ComputeClustersResponse
 	JSON400      *externalRef0.BadRequestResponse
 	JSON401      *externalRef0.UnauthorizedResponse
 	JSON403      *externalRef0.ForbiddenResponse
@@ -466,7 +466,7 @@ func (r GetApiV1OrganizationsOrganizationIDClustersResponse) StatusCode() int {
 type PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON202      *BaremetalClusterResponse
+	JSON202      *ComputeClusterResponse
 	JSON400      *externalRef0.BadRequestResponse
 	JSON401      *externalRef0.UnauthorizedResponse
 	JSON403      *externalRef0.ForbiddenResponse
@@ -609,7 +609,7 @@ func ParseGetApiV1OrganizationsOrganizationIDClustersResponse(rsp *http.Response
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest BaremetalClustersResponse
+		var dest ComputeClustersResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -670,7 +670,7 @@ func ParsePostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersResponse(
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
-		var dest BaremetalClusterResponse
+		var dest ComputeClusterResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

@@ -23,8 +23,8 @@ import (
 	"net/http"
 	"slices"
 
-	unikornv1 "github.com/unikorn-cloud/baremetal/pkg/apis/unikorn/v1alpha1"
-	"github.com/unikorn-cloud/baremetal/pkg/openapi"
+	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
+	"github.com/unikorn-cloud/compute/pkg/openapi"
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreopenapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
@@ -43,7 +43,7 @@ var (
 // generator wraps up the myriad things we need to pass around as an object
 // rather than a whole bunch of arguments.
 type generator struct {
-	// client allows Baremetal access.
+	// client allows Compute access.
 	client client.Client
 	// options allows access to resource defaults.
 	options *Options
@@ -79,18 +79,18 @@ func convertMachine(in *unikornv1core.MachineGeneric) *openapi.MachinePool {
 }
 
 // convertWorkloadPool converts from a custom resource into the API definition.
-func convertWorkloadPool(in *unikornv1.BaremetalClusterWorkloadPoolsPoolSpec) openapi.BaremetalClusterWorkloadPool {
-	workloadPool := openapi.BaremetalClusterWorkloadPool{
+func convertWorkloadPool(in *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) openapi.ComputeClusterWorkloadPool {
+	workloadPool := openapi.ComputeClusterWorkloadPool{
 		Name:    in.Name,
-		Machine: *convertMachine(&in.BaremetalWorkloadPoolSpec.MachineGeneric),
+		Machine: *convertMachine(&in.ComputeWorkloadPoolSpec.MachineGeneric),
 	}
 
 	return workloadPool
 }
 
 // convertWorkloadPools converts from a custom resource into the API definition.
-func convertWorkloadPools(in *unikornv1.BaremetalCluster) []openapi.BaremetalClusterWorkloadPool {
-	workloadPools := make([]openapi.BaremetalClusterWorkloadPool, len(in.Spec.WorkloadPools.Pools))
+func convertWorkloadPools(in *unikornv1.ComputeCluster) []openapi.ComputeClusterWorkloadPool {
+	workloadPools := make([]openapi.ComputeClusterWorkloadPool, len(in.Spec.WorkloadPools.Pools))
 
 	for i := range in.Spec.WorkloadPools.Pools {
 		workloadPools[i] = convertWorkloadPool(&in.Spec.WorkloadPools.Pools[i])
@@ -100,16 +100,16 @@ func convertWorkloadPools(in *unikornv1.BaremetalCluster) []openapi.BaremetalClu
 }
 
 // convert converts from a custom resource into the API definition.
-func convert(in *unikornv1.BaremetalCluster) *openapi.BaremetalClusterRead {
+func convert(in *unikornv1.ComputeCluster) *openapi.ComputeClusterRead {
 	provisioningStatus := coreopenapi.ResourceProvisioningStatusUnknown
 
 	if condition, err := in.StatusConditionRead(unikornv1core.ConditionAvailable); err == nil {
 		provisioningStatus = conversion.ConvertStatusCondition(condition)
 	}
 
-	out := &openapi.BaremetalClusterRead{
+	out := &openapi.ComputeClusterRead{
 		Metadata: conversion.ProjectScopedResourceReadMetadata(in, provisioningStatus),
-		Spec: openapi.BaremetalClusterSpec{
+		Spec: openapi.ComputeClusterSpec{
 			RegionId:      in.Spec.RegionID,
 			WorkloadPools: convertWorkloadPools(in),
 		},
@@ -119,8 +119,8 @@ func convert(in *unikornv1.BaremetalCluster) *openapi.BaremetalClusterRead {
 }
 
 // uconvertList converts from a custom resource list into the API definition.
-func convertList(in *unikornv1.BaremetalClusterList) openapi.BaremetalClusters {
-	out := make(openapi.BaremetalClusters, len(in.Items))
+func convertList(in *unikornv1.ComputeClusterList) openapi.ComputeClusters {
+	out := make(openapi.ComputeClusters, len(in.Items))
 
 	for i := range in.Items {
 		out[i] = *convert(&in.Items[i])
@@ -130,8 +130,8 @@ func convertList(in *unikornv1.BaremetalClusterList) openapi.BaremetalClusters {
 }
 
 // defaultImage returns a default image for either control planes or workload pools
-// based on the specified Baremetal version.
-func (g *generator) defaultImage(ctx context.Context, request *openapi.BaremetalClusterWrite) (*regionapi.Image, error) {
+// based on the specified Compute version.
+func (g *generator) defaultImage(ctx context.Context, request *openapi.ComputeClusterWrite) (*regionapi.Image, error) {
 	resp, err := g.region.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
 		return nil, err
@@ -166,7 +166,7 @@ func (g *generator) generateNetwork() *unikornv1core.NetworkGeneric {
 }
 
 // generateMachineGeneric generates a generic machine part of the cluster.
-func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi.BaremetalClusterWrite, m *openapi.MachinePool, flavor *regionapi.Flavor) (*unikornv1core.MachineGeneric, error) {
+func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi.ComputeClusterWrite, m *openapi.MachinePool, flavor *regionapi.Flavor) (*unikornv1core.MachineGeneric, error) {
 	if m.Replicas == nil {
 		m.Replicas = util.ToPointer(3)
 	}
@@ -186,8 +186,8 @@ func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi
 }
 
 // generateWorkloadPools generates the workload pools part of a cluster.
-func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.BaremetalClusterWrite) (*unikornv1.BaremetalClusterWorkloadPoolsSpec, error) {
-	workloadPools := &unikornv1.BaremetalClusterWorkloadPoolsSpec{}
+func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.ComputeClusterWrite) (*unikornv1.ComputeClusterWorkloadPoolsSpec, error) {
+	workloadPools := &unikornv1.ComputeClusterWorkloadPoolsSpec{}
 
 	for i := range request.Spec.WorkloadPools {
 		pool := &request.Spec.WorkloadPools[i]
@@ -202,8 +202,8 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 			return nil, err
 		}
 
-		workloadPool := unikornv1.BaremetalClusterWorkloadPoolsPoolSpec{
-			BaremetalWorkloadPoolSpec: unikornv1.BaremetalWorkloadPoolSpec{
+		workloadPool := unikornv1.ComputeClusterWorkloadPoolsPoolSpec{
+			ComputeWorkloadPoolSpec: unikornv1.ComputeWorkloadPoolSpec{
 				Name:           pool.Name,
 				MachineGeneric: *machine,
 			},
@@ -217,7 +217,7 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 
 // lookupFlavor resolves the flavor from its name.
 // NOTE: It looks like garbage performance, but the provider should be memoized...
-func (g *generator) lookupFlavor(ctx context.Context, request *openapi.BaremetalClusterWrite, id string) (*regionapi.Flavor, error) {
+func (g *generator) lookupFlavor(ctx context.Context, request *openapi.ComputeClusterWrite, id string) (*regionapi.Flavor, error) {
 	resp, err := g.region.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
 		return nil, err
@@ -239,8 +239,8 @@ func (g *generator) lookupFlavor(ctx context.Context, request *openapi.Baremetal
 // generate generates the full cluster custom resource.
 // TODO: there are a lot of parameters being passed about, we should make this
 // a struct and pass them as a single blob.
-func (g *generator) generate(ctx context.Context, request *openapi.BaremetalClusterWrite) (*unikornv1.BaremetalCluster, error) {
-	baremetalWorkloadPools, err := g.generateWorkloadPools(ctx, request)
+func (g *generator) generate(ctx context.Context, request *openapi.ComputeClusterWrite) (*unikornv1.ComputeCluster, error) {
+	computeWorkloadPools, err := g.generateWorkloadPools(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -250,12 +250,12 @@ func (g *generator) generate(ctx context.Context, request *openapi.BaremetalClus
 		return nil, err
 	}
 
-	cluster := &unikornv1.BaremetalCluster{
+	cluster := &unikornv1.ComputeCluster{
 		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, g.namespace, userinfo.Sub).WithOrganization(g.organizationID).WithProject(g.projectID).Get(),
-		Spec: unikornv1.BaremetalClusterSpec{
+		Spec: unikornv1.ComputeClusterSpec{
 			RegionID:      request.Spec.RegionId,
 			Network:       g.generateNetwork(),
-			WorkloadPools: baremetalWorkloadPools,
+			WorkloadPools: computeWorkloadPools,
 		},
 	}
 
