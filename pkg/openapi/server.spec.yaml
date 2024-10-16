@@ -159,6 +159,47 @@ components:
           description: Flavor ID.
           type: string
           minLength: 1
+        ingressFirewallRules:
+          $ref: '#/components/schemas/ingressFirewallRules'
+        floatingIPAllocation:
+          $ref: '#/components/schemas/floatingIPAllocation'
+    ingressFirewallRules:
+      description: A list of ingress firewall rules applied to a workload pool.
+      type: array
+      items:
+        $ref: '#/components/schemas/ingressFirewallRule'
+    ingressFirewallRule:
+      description: An ingress firewall rule applied to a workload pool.
+      type: object
+      required:
+      - protocol
+      - port
+      - cidr
+      properties:
+        protocol:
+          description: The protocol to allow.
+          type: string
+          enum:
+          - tcp
+          - udp
+        port:
+          description: The port to allow.
+          type: integer
+        cidr:
+          description: The CIDR block to allow, it might be any IPv4 or IPv6 in CIDR notation.
+          type: string
+          example:
+            - 0.0.0.0/0
+            - ::0/0
+    floatingIPAllocation:
+      description: A floating IP allocation settings.
+      type: object
+      required:
+      - enabled
+      properties:
+        enabled:
+          description: Enable floating IP allocation.
+          type: boolean
     computeClusterWorkloadPool:
       description: A Kuberntes cluster workload pool.
       type: object
@@ -234,6 +275,15 @@ components:
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
                   replicas: 3
+                ingressFirewallRules:
+                - protocol: tcp
+                  port: 80
+                  cidr: 192.168.1.0/24
+                - protocol: tcp
+                  port: 443
+                  cidr: 0.0.0.0/0
+                floatingIPAllocation:
+                  enabled: true
   responses:
     computeClusterResponse:
       description: A Compute cluster.
@@ -256,6 +306,15 @@ components:
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
                   replicas: 3
+                ingressFirewallRules:
+                - protocol: tcp
+                  port: 80
+                  cidr: 192.168.1.0/24
+                - protocol: tcp
+                  port: 443
+                  cidr: 0.0.0.0/0
+                floatingIPAllocation:
+                  enabled: true
     computeClustersResponse:
       description: A list of Compute clusters.
       content:
@@ -277,6 +336,15 @@ components:
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
                   replicas: 3
+                ingressFirewallRules:
+                - protocol: tcp
+                  port: 80
+                  cidr: 192.168.1.0/24
+                - protocol: tcp
+                  port: 443
+                  cidr: 0.0.0.0/0
+                floatingIPAllocation:
+                  enabled: true
   securitySchemes:
     oauth2Authentication:
       description: Operation requires OAuth2 bearer token authentication.
