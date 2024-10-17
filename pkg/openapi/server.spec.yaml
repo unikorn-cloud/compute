@@ -159,17 +159,21 @@ components:
           description: Flavor ID.
           type: string
           minLength: 1
-        ingressFirewallRules:
-          $ref: '#/components/schemas/ingressFirewallRules'
-        floatingIPAllocation:
-          $ref: '#/components/schemas/floatingIPAllocation'
-    ingressFirewallRules:
-      description: A list of ingress firewall rules applied to a workload pool.
+        firewall:
+          description: A list of firewall rules applied to a workload pool.
+          type: object
+          properties:
+            ingress:
+              $ref: '#/components/schemas/firewallRules'
+        publicIPAllocation:
+          $ref: '#/components/schemas/publicIPAllocation'
+    firewallRules:
+      description: A list of firewall rules applied to a workload pool.
       type: array
       items:
-        $ref: '#/components/schemas/ingressFirewallRule'
-    ingressFirewallRule:
-      description: An ingress firewall rule applied to a workload pool.
+        $ref: '#/components/schemas/firewallRule'
+    firewallRule:
+      description: A firewall rule applied to a workload pool.
       type: object
       required:
       - protocol
@@ -183,25 +187,45 @@ components:
           - tcp
           - udp
         port:
+          $ref: '#/components/schemas/firewallRulePort'
+        cidr:
+          description: A list of CIDR blocks to allow, it might be any IPv4 or IPv6 in CIDR notation.
+          type: array
+          items:
+            type: string
+    firewallRulePort:
+      description: The port definition to allow traffic.
+      type: object
+      properties:
+        number:
           description: The port to allow.
           type: integer
-        cidr:
-          description: The CIDR block to allow, it might be any IPv4 or IPv6 in CIDR notation.
-          type: string
-          example:
-            - 0.0.0.0/0
-            - ::0/0
-    floatingIPAllocation:
-      description: A floating IP allocation settings.
+        range:
+          $ref: '#/components/schemas/firewallRulePortRange'
+    firewallRulePortRange:
+      description: The port range to allow traffic.
+      type: object
+      required:
+      - start
+      - end
+      properties:
+        start:
+          description: The start of the port range.
+          type: integer
+        end:
+          description: The end of the port range.
+          type: integer
+    publicIPAllocation:
+      description: A public IP allocation settings.
       type: object
       required:
       - enabled
       properties:
         enabled:
-          description: Enable floating IP allocation.
+          description: Enable public IP allocation.
           type: boolean
     computeClusterWorkloadPool:
-      description: A Kuberntes cluster workload pool.
+      description: A Compute cluster workload pool.
       type: object
       required:
       - name
@@ -230,6 +254,59 @@ components:
           type: string
         workloadPools:
           $ref: '#/components/schemas/computeClusterWorkloadPools'
+    computeClusterStatus:
+      description: Compute cluster status.
+      type: object
+      properties:
+        workloadPools:
+          $ref: '#/components/schemas/computeClusterWorkloadPoolsStatus'
+    computeClusterWorkloadPoolsStatus:
+      description: A list of Compute cluster workload pools status.
+      type: array
+      items:
+        $ref: '#/components/schemas/computeClusterWorkloadPoolStatus'
+    computeClusterWorkloadPoolStatus:
+      description: Compute cluster workload pool status.
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          description: Workload pool name.
+          type: string
+        machines:
+          $ref: '#/components/schemas/computeClusterMachinesStatus'
+    computeClusterMachinesStatus:
+      description: A list of Compute cluster machines status.
+      type: array
+      items:
+        $ref: '#/components/schemas/computeClusterMachineStatus'
+    computeClusterMachineStatus:
+      description: Compute cluster machine status.
+      type: object
+      required:
+      - hostname
+      - privateIP
+      - status
+      properties:
+        hostname:
+          description: Machine hostname.
+          type: string
+        privateIP:
+          description: Machine private IP address.
+          type: string
+        publicIP:
+          description: Machine public IP address.
+          type: string
+        status:
+          description: Machine status.
+          type: string
+          enum:
+          - unknown
+          - provisioning
+          - provisioned
+          - deprovisioning
+          - error
     computeClusterRead:
       description: Compute cluster read.
       type: object
@@ -241,6 +318,8 @@ components:
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/schemas/projectScopedResourceReadMetadata'
         spec:
           $ref: '#/components/schemas/computeClusterSpec'
+        status:
+          $ref: '#/components/schemas/computeClusterStatus'
     computeClusterWrite:
       description: Compute cluster create or update.
       type: object
@@ -275,14 +354,22 @@ components:
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
                   replicas: 3
-                ingressFirewallRules:
-                - protocol: tcp
-                  port: 80
-                  cidr: 192.168.1.0/24
-                - protocol: tcp
-                  port: 443
-                  cidr: 0.0.0.0/0
-                floatingIPAllocation:
+                firewall:
+                  ingress:
+                  - protocol: tcp
+                    port: 
+                      number: 80
+                    cidr: 
+                    - 192.168.1.0/24
+                  - protocol: tcp
+                    port:
+                      range:
+                        start: 1066
+                        end: 1999
+                    cidr: 
+                    - 10.0.0.0/8
+                    - 172.16.0.0/12
+                publicIPAllocation:
                   enabled: true
   responses:
     computeClusterResponse:
@@ -306,15 +393,31 @@ components:
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
                   replicas: 3
-                ingressFirewallRules:
-                - protocol: tcp
-                  port: 80
-                  cidr: 192.168.1.0/24
-                - protocol: tcp
-                  port: 443
-                  cidr: 0.0.0.0/0
-                floatingIPAllocation:
+                firewall:
+                  ingress:
+                  - protocol: tcp
+                    port: 
+                      number: 80
+                    cidr: 
+                    - 192.168.1.0/24
+                  - protocol: tcp
+                    port:
+                      range:
+                        start: 1066
+                        end: 1999
+                    cidr: 
+                    - 10.0.0.0/8
+                    - 172.16.0.0/12
+                publicIPAllocation:
                   enabled: true
+            status:
+              workloadPools:
+              - name: default
+                machines:
+                - hostname: machine-1
+                  privateIP: 10.0.0.1
+                  publicIP: 172.16.0.2
+                  status: provisioned
     computeClustersResponse:
       description: A list of Compute clusters.
       content:
@@ -336,15 +439,31 @@ components:
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
                   replicas: 3
-                ingressFirewallRules:
-                - protocol: tcp
-                  port: 80
-                  cidr: 192.168.1.0/24
-                - protocol: tcp
-                  port: 443
-                  cidr: 0.0.0.0/0
-                floatingIPAllocation:
+                firewall:
+                  ingress:
+                  - protocol: tcp
+                    port: 
+                      number: 80
+                    cidr: 
+                    - 192.168.1.0/24
+                  - protocol: tcp
+                    port:
+                      range:
+                        start: 1066
+                        end: 1999
+                    cidr: 
+                    - 10.0.0.0/8
+                    - 172.16.0.0/12
+                publicIPAllocation:
                   enabled: true
+            status:
+              workloadPools:
+              - name: default
+                machines:
+                - hostname: machine-1
+                  privateIP: 10.0.0.1
+                  publicIP: 172.16.0.2
+                  status: provisioned
   securitySchemes:
     oauth2Authentication:
       description: Operation requires OAuth2 bearer token authentication.
