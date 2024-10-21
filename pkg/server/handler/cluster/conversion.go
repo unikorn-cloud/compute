@@ -29,9 +29,10 @@ import (
 	coreopenapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
-	"github.com/unikorn-cloud/core/pkg/util"
 	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
+
+	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -168,7 +169,7 @@ func (g *generator) generateNetwork() *unikornv1core.NetworkGeneric {
 // generateMachineGeneric generates a generic machine part of the cluster.
 func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi.ComputeClusterWrite, m *openapi.MachinePool, flavor *regionapi.Flavor) (*unikornv1core.MachineGeneric, error) {
 	if m.Replicas == nil {
-		m.Replicas = util.ToPointer(3)
+		m.Replicas = ptr.To(3)
 	}
 
 	image, err := g.defaultImage(ctx, request)
@@ -178,7 +179,7 @@ func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi
 
 	machine := &unikornv1core.MachineGeneric{
 		Replicas: m.Replicas,
-		ImageID:  util.ToPointer(image.Metadata.Id),
+		ImageID:  ptr.To(image.Metadata.Id),
 		FlavorID: &flavor.Metadata.Id,
 	}
 
