@@ -167,6 +167,17 @@ components:
               $ref: '#/components/schemas/firewallRules'
         publicIPAllocation:
           $ref: '#/components/schemas/publicIPAllocation'
+        image:
+          $ref: '#/components/schemas/imageSelector'
+        ssh:
+          description: SSH settings.
+          type: object
+          properties:
+            publicKeys:
+              description: A list of public SSH keys to allow access to the machine.
+              type: array
+              items:
+                type: string
     firewallRules:
       description: A list of firewall rules applied to a workload pool.
       type: array
@@ -224,6 +235,19 @@ components:
         enabled:
           description: Enable public IP allocation.
           type: boolean
+    imageSelector:
+      description: A server image selector.
+      type: object
+      required:
+      - os
+      - version
+      properties:
+        os:
+          description: The operating system to use.
+          type: string
+        version:
+          description: The operating system version to use.
+          type: string
     computeClusterWorkloadPool:
       description: A Compute cluster workload pool.
       type: object
@@ -371,6 +395,13 @@ components:
                     - 172.16.0.0/12
                 publicIPAllocation:
                   enabled: true
+                image:
+                  os: ubuntu
+                  version: 20.04
+                ssh:
+                  publicKeys:
+                  - ssh-rsa AAA3NzC1yc2AAADAQABAABgQDZ6...
+                  - ssh-rsa AAA3NzaC1yc2AADAQAAAABgQDZ7...
   responses:
     computeClusterResponse:
       description: A Compute cluster.
@@ -410,6 +441,13 @@ components:
                     - 172.16.0.0/12
                 publicIPAllocation:
                   enabled: true
+                image:
+                  os: ubuntu
+                  version: 20.04
+                ssh:
+                  publicKeys:
+                  - ssh-rsa AAA3NzC1yc2AAADAQABAABgQDZ6...
+                  - ssh-rsa AAA3NzaC1yc2AADAQAAAABgQDZ7...
             status:
               workloadPools:
               - name: default
@@ -456,6 +494,13 @@ components:
                     - 172.16.0.0/12
                 publicIPAllocation:
                   enabled: true
+                image:
+                  os: ubuntu
+                  version: 20.04
+                ssh:
+                  publicKeys:
+                  - ssh-rsa AAA3NzC1yc2AAADAQABAABgQDZ6...
+                  - ssh-rsa AAA3NzaC1yc2AADAQAAAABgQDZ7...
             status:
               workloadPools:
               - name: default
