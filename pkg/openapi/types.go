@@ -11,12 +11,51 @@ const (
 	Oauth2AuthenticationScopes = "oauth2Authentication.Scopes"
 )
 
+// Defines values for ComputeClusterMachineStatusStatus.
+const (
+	Deprovisioning ComputeClusterMachineStatusStatus = "deprovisioning"
+	Error          ComputeClusterMachineStatusStatus = "error"
+	Provisioned    ComputeClusterMachineStatusStatus = "provisioned"
+	Provisioning   ComputeClusterMachineStatusStatus = "provisioning"
+	Unknown        ComputeClusterMachineStatusStatus = "unknown"
+)
+
+// Defines values for FirewallRuleProtocol.
+const (
+	Tcp FirewallRuleProtocol = "tcp"
+	Udp FirewallRuleProtocol = "udp"
+)
+
+// ComputeClusterMachineStatus Compute cluster machine status.
+type ComputeClusterMachineStatus struct {
+	// Hostname Machine hostname.
+	Hostname string `json:"hostname"`
+
+	// PrivateIP Machine private IP address.
+	PrivateIP string `json:"privateIP"`
+
+	// PublicIP Machine public IP address.
+	PublicIP *string `json:"publicIP,omitempty"`
+
+	// Status Machine status.
+	Status ComputeClusterMachineStatusStatus `json:"status"`
+}
+
+// ComputeClusterMachineStatusStatus Machine status.
+type ComputeClusterMachineStatusStatus string
+
+// ComputeClusterMachinesStatus A list of Compute cluster machines status.
+type ComputeClusterMachinesStatus = []ComputeClusterMachineStatus
+
 // ComputeClusterRead Compute cluster read.
 type ComputeClusterRead struct {
 	Metadata externalRef0.ProjectScopedResourceReadMetadata `json:"metadata"`
 
 	// Spec Compute cluster creation parameters.
 	Spec ComputeClusterSpec `json:"spec"`
+
+	// Status Compute cluster status.
+	Status *ComputeClusterStatus `json:"status,omitempty"`
 }
 
 // ComputeClusterSpec Compute cluster creation parameters.
@@ -28,7 +67,13 @@ type ComputeClusterSpec struct {
 	WorkloadPools ComputeClusterWorkloadPools `json:"workloadPools"`
 }
 
-// ComputeClusterWorkloadPool A Kuberntes cluster workload pool.
+// ComputeClusterStatus Compute cluster status.
+type ComputeClusterStatus struct {
+	// WorkloadPools A list of Compute cluster workload pools status.
+	WorkloadPools *ComputeClusterWorkloadPoolsStatus `json:"workloadPools,omitempty"`
+}
+
+// ComputeClusterWorkloadPool A Compute cluster workload pool.
 type ComputeClusterWorkloadPool struct {
 	// Machine A Compute cluster machine.
 	Machine MachinePool `json:"machine"`
@@ -37,8 +82,20 @@ type ComputeClusterWorkloadPool struct {
 	Name string `json:"name"`
 }
 
+// ComputeClusterWorkloadPoolStatus Compute cluster workload pool status.
+type ComputeClusterWorkloadPoolStatus struct {
+	// Machines A list of Compute cluster machines status.
+	Machines *ComputeClusterMachinesStatus `json:"machines,omitempty"`
+
+	// Name Workload pool name.
+	Name string `json:"name"`
+}
+
 // ComputeClusterWorkloadPools A list of Compute cluster workload pools.
 type ComputeClusterWorkloadPools = []ComputeClusterWorkloadPool
+
+// ComputeClusterWorkloadPoolsStatus A list of Compute cluster workload pools status.
+type ComputeClusterWorkloadPoolsStatus = []ComputeClusterWorkloadPoolStatus
 
 // ComputeClusterWrite Compute cluster create or update.
 type ComputeClusterWrite struct {
@@ -55,13 +112,82 @@ type ComputeClusters = []ComputeClusterRead
 // ComputeNameParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
 type ComputeNameParameter = string
 
+// FirewallRule A firewall rule applied to a workload pool.
+type FirewallRule struct {
+	// Cidr A list of CIDR blocks to allow, it might be any IPv4 or IPv6 in CIDR notation.
+	Cidr []string `json:"cidr"`
+
+	// Port The port definition to allow traffic.
+	Port FirewallRulePort `json:"port"`
+
+	// Protocol The protocol to allow.
+	Protocol FirewallRuleProtocol `json:"protocol"`
+}
+
+// FirewallRuleProtocol The protocol to allow.
+type FirewallRuleProtocol string
+
+// FirewallRulePort The port definition to allow traffic.
+type FirewallRulePort struct {
+	// Number The port to allow.
+	Number *int `json:"number,omitempty"`
+
+	// Range The port range to allow traffic.
+	Range *FirewallRulePortRange `json:"range,omitempty"`
+}
+
+// FirewallRulePortRange The port range to allow traffic.
+type FirewallRulePortRange struct {
+	// End The end of the port range.
+	End int `json:"end"`
+
+	// Start The start of the port range.
+	Start int `json:"start"`
+}
+
+// FirewallRules A list of firewall rules applied to a workload pool.
+type FirewallRules = []FirewallRule
+
+// ImageSelector A server image selector.
+type ImageSelector struct {
+	// Os The operating system to use.
+	Os string `json:"os"`
+
+	// Version The operating system version to use.
+	Version string `json:"version"`
+}
+
 // MachinePool A Compute cluster machine.
 type MachinePool struct {
+	// Firewall A list of firewall rules applied to a workload pool.
+	Firewall *struct {
+		// Ingress A list of firewall rules applied to a workload pool.
+		Ingress *FirewallRules `json:"ingress,omitempty"`
+	} `json:"firewall,omitempty"`
+
 	// FlavorId Flavor ID.
 	FlavorId *string `json:"flavorId,omitempty"`
 
+	// Image A server image selector.
+	Image *ImageSelector `json:"image,omitempty"`
+
+	// PublicIPAllocation A public IP allocation settings.
+	PublicIPAllocation *PublicIPAllocation `json:"publicIPAllocation,omitempty"`
+
 	// Replicas Number of machines for a statically sized pool or the maximum for an auto-scaled pool.
 	Replicas *int `json:"replicas,omitempty"`
+
+	// Ssh SSH settings.
+	Ssh *struct {
+		// PublicKeys A list of public SSH keys to allow access to the machine.
+		PublicKeys *[]string `json:"publicKeys,omitempty"`
+	} `json:"ssh,omitempty"`
+}
+
+// PublicIPAllocation A public IP allocation settings.
+type PublicIPAllocation struct {
+	// Enabled Enable public IP allocation.
+	Enabled bool `json:"enabled"`
 }
 
 // ClusterIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
