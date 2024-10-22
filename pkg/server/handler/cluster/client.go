@@ -32,13 +32,13 @@ import (
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
-	"github.com/unikorn-cloud/core/pkg/util"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -135,7 +135,7 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 	request := regionapi.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesJSONRequestBody{
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        "compute-cluster-" + clusterID,
-			Description: util.ToPointer("Identity for Compute cluster " + clusterID),
+			Description: ptr.To("Identity for Compute cluster " + clusterID),
 		},
 		Spec: regionapi.IdentityWriteSpec{
 			RegionId: regionID,
@@ -172,7 +172,7 @@ func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizatio
 	request := regionapi.PhysicalNetworkWrite{
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        "compute-cluster-" + cluster.Name,
-			Description: util.ToPointer("Physical network for cluster " + cluster.Name),
+			Description: ptr.To("Physical network for cluster " + cluster.Name),
 		},
 		Spec: &regionapi.PhysicalNetworkWriteSpec{
 			Tags:           &tags,
