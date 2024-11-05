@@ -18,6 +18,7 @@ limitations under the License.
 package handler
 
 import (
+	"context"
 	"net/http"
 	"slices"
 
@@ -25,9 +26,11 @@ import (
 	"github.com/unikorn-cloud/compute/pkg/server/handler/cluster"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/core/pkg/server/util"
+	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	"github.com/unikorn-cloud/identity/pkg/rbac"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
+	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -42,19 +45,38 @@ type Handler struct {
 	// options allows behaviour to be defined on the CLI.
 	options *Options
 
+	// issuer provides privilge escallation for the API so the end user doesn't
+	// have to be granted unnecessary privilige.
+	issuer *identityclient.TokenIssuer
+
 	// region is a client to access regions.
 	region *regionclient.Client
 }
 
-func New(client client.Client, namespace string, options *Options, region *regionclient.Client) (*Handler, error) {
+func New(client client.Client, namespace string, options *Options, issuer *identityclient.TokenIssuer, region *regionclient.Client) (*Handler, error) {
 	h := &Handler{
 		client:    client,
 		namespace: namespace,
 		options:   options,
+		issuer:    issuer,
 		region:    region,
 	}
 
 	return h, nil
+}
+
+func (h *Handler) regionClient(ctx context.Context) (*regionapi.ClientWithResponses, error) {
+	token, err := h.issuer.Issue(ctx, "kubernetes-api")
+	if err != nil {
+		return nil, err
+	}
+
+	region, err := h.region.Client(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	return region, nil
 }
 
 /*
@@ -69,7 +91,7 @@ func (h *Handler) setUncacheable(w http.ResponseWriter) {
 }
 
 func (h *Handler) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter) {
-	region, err := h.region.Client(r.Context())
+	region, err := h.regionClient(r.Context())
 	if err != nil {
 		errors.HandleError(w, r, err)
 		return
@@ -81,8 +103,10 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWri
 		return
 	}
 
+	ctx := r.Context()
+
 	result = slices.DeleteFunc(result, func(resource openapi.ComputeClusterRead) bool {
-		return rbac.AllowProjectScope(r.Context(), "computeclusters", identityapi.Read, organizationID, resource.Metadata.ProjectId) != nil
+		return rbac.AllowProjectScope(ctx, "compute:clusters", identityapi.Read, organizationID, resource.Metadata.ProjectId) != nil
 	})
 
 	h.setUncacheable(w)
@@ -90,7 +114,7 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWri
 }
 
 func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter) {
-	if err := rbac.AllowProjectScope(r.Context(), "computeclusters", identityapi.Create, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScope(r.Context(), "compute:clusters", identityapi.Create, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -102,7 +126,7 @@ func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(
 		return
 	}
 
-	region, err := h.region.Client(r.Context())
+	region, err := h.regionClient(r.Context())
 	if err != nil {
 		errors.HandleError(w, r, err)
 		return
@@ -119,12 +143,12 @@ func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(
 }
 
 func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.ClusterIDParameter) {
-	if err := rbac.AllowProjectScope(r.Context(), "computeclusters", identityapi.Delete, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScope(r.Context(), "compute:clusters", identityapi.Delete, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
 
-	region, err := h.region.Client(r.Context())
+	region, err := h.regionClient(r.Context())
 	if err != nil {
 		errors.HandleError(w, r, err)
 		return
@@ -140,7 +164,7 @@ func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDCluster
 }
 
 func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.ClusterIDParameter) {
-	if err := rbac.AllowProjectScope(r.Context(), "computeclusters", identityapi.Update, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScope(r.Context(), "compute:clusters", identityapi.Update, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -152,7 +176,7 @@ func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersCl
 		return
 	}
 
-	region, err := h.region.Client(r.Context())
+	region, err := h.regionClient(r.Context())
 	if err != nil {
 		errors.HandleError(w, r, err)
 		return

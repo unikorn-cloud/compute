@@ -112,14 +112,14 @@ func (p *Provisioner) getRegionClient(ctx context.Context, traceName string) (co
 
 	tokenIssuer := identityclient.NewTokenIssuer(cli, p.options.identityOptions, &p.options.clientOptions, constants.Application, constants.Version)
 
-	ctx, err = tokenIssuer.Context(ctx, traceName)
+	token, err := tokenIssuer.Issue(ctx, traceName)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	getter := regionclient.New(cli, p.options.regionOptions, &p.options.clientOptions)
 
-	client, err := getter.Client(ctx)
+	client, err := getter.Client(ctx, token)
 	if err != nil {
 		return nil, nil, err
 	}
