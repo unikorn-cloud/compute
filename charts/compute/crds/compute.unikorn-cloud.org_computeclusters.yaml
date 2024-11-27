@@ -104,6 +104,62 @@ spec:
                             This is irrelevant for baremetal machine flavors.
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
+                        firewall:
+                          description: Firewall is the workload pool firewall configuration.
+                          properties:
+                            ingress:
+                              description: Ingress is a list of firewall rules applied
+                                to a workload pool.
+                              items:
+                                properties:
+                                  cidr:
+                                    description: CIDR is the CIDR block to allow traffic
+                                      from.
+                                    pattern: ^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\/(?:3[0-2]|[1-2]?[0-9])$
+                                    type: string
+                                  id:
+                                    description: ID is the firewall rule identifier.
+                                    type: string
+                                  port:
+                                    description: Port is the port or range of ports.
+                                    properties:
+                                      number:
+                                        description: Number is the port number.
+                                        type: integer
+                                      range:
+                                        description: Range is the port range.
+                                        properties:
+                                          end:
+                                            description: End is the end of the range.
+                                            maximum: 65535
+                                            type: integer
+                                          start:
+                                            description: Start is the start of the
+                                              range.
+                                            minimum: 1
+                                            type: integer
+                                        required:
+                                        - end
+                                        - start
+                                        type: object
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: at least one of number or range must
+                                        be defined
+                                      rule: (has(self.number) || has(self.range))
+                                  protocol:
+                                    description: Protocol The protocol to allow.
+                                    enum:
+                                    - tcp
+                                    - udp
+                                    type: string
+                                required:
+                                - cidr
+                                - port
+                                - protocol
+                                type: object
+                              type: array
+                          type: object
                         flavorId:
                           description: Flavor is the regions service flavor to deploy
                             with.
@@ -115,6 +171,14 @@ spec:
                         name:
                           description: Name is the name of the pool.
                           type: string
+                        publicIPAllocation:
+                          description: PublicIPAllocation is the workload pool public
+                            IP allocation configuration.
+                          properties:
+                            enabled:
+                              description: Enabled is a flag to enable public IP allocation.
+                              type: boolean
+                          type: object
                         replicas:
                           default: 3
                           description: Replicas is the initial pool size to deploy.
@@ -185,6 +249,52 @@ spec:
               namespace:
                 description: Namespace defines the namespace a cluster resides in.
                 type: string
+              pools:
+                description: WorkloadPools contains the status of the workload pools.
+                items:
+                  properties:
+                    firewall:
+                      description: Firewall is the workload pool firewall status.
+                      properties:
+                        id:
+                          description: ProviderID is the provider firewall identifier.
+                          type: string
+                        ingress:
+                          description: Ingress is a list of firewall rules applied
+                            to a workload pool.
+                          items:
+                            properties:
+                              id:
+                                description: ID is the firewall rule identifier.
+                                type: string
+                              providerId:
+                                description: ProviderID is the firewall rule provider
+                                  identifier.
+                                type: string
+                            type: object
+                          type: array
+                      type: object
+                    name:
+                      description: Name is the name of the pool.
+                      type: string
+                    servers:
+                      description: Servers is the workload pool servers status.
+                      items:
+                        properties:
+                          name:
+                            description: Name is the server name.
+                            type: string
+                          providerId:
+                            description: ProviderID is the provider server identifier.
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  type: object
+                type: array
             type: object
         required:
         - spec

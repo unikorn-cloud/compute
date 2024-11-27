@@ -155,7 +155,7 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 	return resp.JSON201, nil
 }
 
-func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizationID, projectID string, cluster *unikornv1.ComputeCluster, identity *regionapi.IdentityRead) (*regionapi.PhysicalNetworkRead, error) {
+func (c *Client) createNetworkOpenstack(ctx context.Context, organizationID, projectID string, cluster *unikornv1.ComputeCluster, identity *regionapi.IdentityRead) (*regionapi.NetworkRead, error) {
 	tags := regionapi.TagList{
 		regionapi.Tag{
 			Name:  constants.ComputeClusterLabel,
@@ -169,25 +169,25 @@ func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizatio
 		dnsNameservers[i] = ip.String()
 	}
 
-	request := regionapi.PhysicalNetworkWrite{
+	request := regionapi.NetworkWrite{
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        "compute-cluster-" + cluster.Name,
-			Description: ptr.To("Physical network for cluster " + cluster.Name),
+			Description: ptr.To("Network for cluster " + cluster.Name),
 		},
-		Spec: &regionapi.PhysicalNetworkWriteSpec{
+		Spec: &regionapi.NetworkWriteSpec{
 			Tags:           &tags,
 			Prefix:         cluster.Spec.Network.NodeNetwork.String(),
 			DnsNameservers: dnsNameservers,
 		},
 	}
 
-	resp, err := c.region.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDPhysicalnetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
+	resp, err := c.region.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to physical network").WithError(err)
+		return nil, errors.OAuth2ServerError("unable to create network").WithError(err)
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return nil, errors.OAuth2ServerError("unable to create physical network")
+		return nil, errors.OAuth2ServerError("unable to create network")
 	}
 
 	return resp.JSON201, nil
@@ -237,7 +237,7 @@ func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizati
 	// networks, so play it safe.  Please note that the cluster controller will
 	// automatically discover the physical network, so we don't need an annotation.
 	if region.Spec.Features.PhysicalNetworks {
-		physicalNetwork, err := c.createPhysicalNetworkOpenstack(ctx, organizationID, projectID, cluster, identity)
+		physicalNetwork, err := c.createNetworkOpenstack(ctx, organizationID, projectID, cluster, identity)
 		if err != nil {
 			return errors.OAuth2ServerError("failed to create physical network").WithError(err)
 		}
@@ -255,7 +255,7 @@ func (c *Client) Create(ctx context.Context, organizationID, projectID string, r
 		return nil, err
 	}
 
-	cluster, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).generate(ctx, request)
+	cluster, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID, nil).generate(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -321,7 +321,7 @@ func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterI
 		return err
 	}
 
-	required, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).generate(ctx, request)
+	required, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID, current).generate(ctx, request)
 	if err != nil {
 		return err
 	}

@@ -112,6 +112,12 @@ type ComputeClusters = []ComputeClusterRead
 // ComputeNameParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
 type ComputeNameParameter = string
 
+// Firewall A list of firewall rules applied to a workload pool.
+type Firewall struct {
+	// Ingress A list of firewall rules applied to a workload pool.
+	Ingress *FirewallRules `json:"ingress,omitempty"`
+}
+
 // FirewallRule A firewall rule applied to a workload pool.
 type FirewallRule struct {
 	// Cidr A list of CIDR blocks to allow, it might be any IPv4 or IPv6 in CIDR notation.
@@ -160,10 +166,7 @@ type ImageSelector struct {
 // MachinePool A Compute cluster machine.
 type MachinePool struct {
 	// Firewall A list of firewall rules applied to a workload pool.
-	Firewall *struct {
-		// Ingress A list of firewall rules applied to a workload pool.
-		Ingress *FirewallRules `json:"ingress,omitempty"`
-	} `json:"firewall,omitempty"`
+	Firewall *Firewall `json:"firewall,omitempty"`
 
 	// FlavorId Flavor ID.
 	FlavorId *string `json:"flavorId,omitempty"`
