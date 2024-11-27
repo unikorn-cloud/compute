@@ -109,7 +109,7 @@ func convert(in *unikornv1.ComputeCluster) *openapi.ComputeClusterRead {
 	}
 
 	out := &openapi.ComputeClusterRead{
-		Metadata: conversion.ProjectScopedResourceReadMetadata(in, provisioningStatus),
+		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags, provisioningStatus),
 		Spec: openapi.ComputeClusterSpec{
 			RegionId:      in.Spec.RegionID,
 			WorkloadPools: convertWorkloadPools(in),
@@ -254,6 +254,7 @@ func (g *generator) generate(ctx context.Context, request *openapi.ComputeCluste
 	cluster := &unikornv1.ComputeCluster{
 		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, g.namespace, userinfo.Sub).WithOrganization(g.organizationID).WithProject(g.projectID).Get(),
 		Spec: unikornv1.ComputeClusterSpec{
+			Tags:          conversion.GenerateTagList(request.Metadata.Tags),
 			RegionID:      request.Spec.RegionId,
 			Network:       g.generateNetwork(),
 			WorkloadPools: computeWorkloadPools,
