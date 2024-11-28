@@ -105,9 +105,7 @@ func (p *Provisioner) createSecurityGroup(ctx context.Context, client regionapi.
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        p.securityGroupName(pool),
 			Description: ptr.To("Security group for cluster " + p.cluster.Name),
-		},
-		Spec: &regionapi.SecurityGroupWriteSpec{
-			Tags: p.tags(pool),
+			Tags:        p.tags(pool),
 		},
 	}
 
@@ -233,11 +231,11 @@ func (p *Provisioner) getSecurityGroups(ctx context.Context, client regionapi.Cl
 
 	// Filter out security groups that aren't from this cluster.
 	result := slices.DeleteFunc(*response.JSON200, func(sg regionapi.SecurityGroupRead) bool {
-		if sg.Spec.Tags == nil {
+		if sg.Metadata.Tags == nil {
 			return true
 		}
 
-		index := slices.IndexFunc(*sg.Spec.Tags, func(tag regionapi.Tag) bool {
+		index := slices.IndexFunc(*sg.Metadata.Tags, func(tag coreapi.Tag) bool {
 			return tag.Name == coreconstants.ComputeClusterLabel && tag.Value == p.cluster.Name
 		})
 
@@ -261,7 +259,7 @@ func (p *Provisioner) getProvisionedSecurityGroupSet(ctx context.Context, client
 
 	for _, sg := range *securitygroups {
 		// find the security group tag
-		index := slices.IndexFunc(*sg.Spec.Tags, func(tag regionapi.Tag) bool {
+		index := slices.IndexFunc(*sg.Metadata.Tags, func(tag coreapi.Tag) bool {
 			return tag.Name == WorkloadPoolLabel
 		})
 
@@ -269,7 +267,7 @@ func (p *Provisioner) getProvisionedSecurityGroupSet(ctx context.Context, client
 			continue
 		}
 
-		poolName := (*sg.Spec.Tags)[index].Value
+		poolName := (*sg.Metadata.Tags)[index].Value
 		result[poolName] = &sg
 	}
 

@@ -290,13 +290,13 @@ func (p *Provisioner) Deprovision(ctx context.Context) error {
 	return nil
 }
 
-func (p *Provisioner) tags(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *regionapi.TagList {
-	return &regionapi.TagList{
-		regionapi.Tag{
+func (p *Provisioner) tags(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *coreapi.TagList {
+	return &coreapi.TagList{
+		coreapi.Tag{
 			Name:  coreconstants.ComputeClusterLabel,
 			Value: p.cluster.Name,
 		},
-		regionapi.Tag{
+		coreapi.Tag{
 			Name:  WorkloadPoolLabel,
 			Value: pool.Name,
 		},

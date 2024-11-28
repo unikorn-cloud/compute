@@ -110,6 +110,8 @@ type ComputeCluster struct {
 type ComputeClusterSpec struct {
 	// Pause, if true, will inhibit reconciliation.
 	Pause bool `json:"pause,omitempty"`
+	// Tags are aribrary user data.
+	Tags unikornv1core.TagList `json:"tags,omitempty"`
 	// Region to provision the cluster in.
 	RegionID string `json:"regionId"`
 	// Network defines the Compute networking.

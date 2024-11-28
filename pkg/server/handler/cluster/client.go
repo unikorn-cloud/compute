@@ -125,8 +125,8 @@ func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikorn
 }
 
 func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, regionID, clusterID string) (*regionapi.IdentityRead, error) {
-	tags := regionapi.TagList{
-		regionapi.Tag{
+	tags := coreapi.TagList{
+		coreapi.Tag{
 			Name:  constants.ComputeClusterLabel,
 			Value: clusterID,
 		},
@@ -136,10 +136,10 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        "compute-cluster-" + clusterID,
 			Description: ptr.To("Identity for Compute cluster " + clusterID),
+			Tags:        &tags,
 		},
 		Spec: regionapi.IdentityWriteSpec{
 			RegionId: regionID,
-			Tags:     &tags,
 		},
 	}
 
@@ -156,8 +156,8 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 }
 
 func (c *Client) createNetworkOpenstack(ctx context.Context, organizationID, projectID string, cluster *unikornv1.ComputeCluster, identity *regionapi.IdentityRead) (*regionapi.NetworkRead, error) {
-	tags := regionapi.TagList{
-		regionapi.Tag{
+	tags := coreapi.TagList{
+		coreapi.Tag{
 			Name:  constants.ComputeClusterLabel,
 			Value: cluster.Name,
 		},
@@ -172,10 +172,10 @@ func (c *Client) createNetworkOpenstack(ctx context.Context, organizationID, pro
 	request := regionapi.NetworkWrite{
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        "compute-cluster-" + cluster.Name,
-			Description: ptr.To("Network for cluster " + cluster.Name),
+			Description: ptr.To("PNetwork for cluster " + cluster.Name),
+			Tags:        &tags,
 		},
 		Spec: &regionapi.NetworkWriteSpec{
-			Tags:           &tags,
 			Prefix:         cluster.Spec.Network.NodeNetwork.String(),
 			DnsNameservers: dnsNameservers,
 		},
@@ -237,12 +237,12 @@ func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizati
 	// networks, so play it safe.  Please note that the cluster controller will
 	// automatically discover the physical network, so we don't need an annotation.
 	if region.Spec.Features.PhysicalNetworks {
-		physicalNetwork, err := c.createNetworkOpenstack(ctx, organizationID, projectID, cluster, identity)
+		network, err := c.createNetworkOpenstack(ctx, organizationID, projectID, cluster, identity)
 		if err != nil {
 			return errors.OAuth2ServerError("failed to create physical network").WithError(err)
 		}
 
-		cluster.Annotations[constants.PhysicalNetworkAnnotation] = physicalNetwork.Metadata.Id
+		cluster.Annotations[constants.PhysicalNetworkAnnotation] = network.Metadata.Id
 	}
 
 	return nil

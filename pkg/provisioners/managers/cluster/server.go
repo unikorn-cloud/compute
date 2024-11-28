@@ -84,9 +84,9 @@ func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientW
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        name,
 			Description: ptr.To("Server for cluster " + p.cluster.Name),
+			Tags:        p.tags(pool),
 		},
 		Spec: regionapi.ServerWriteSpec{
-			Tags:     p.tags(pool),
 			FlavorId: *pool.FlavorID,
 			Image: regionapi.ServerImage{
 				Id: pool.ImageID,
@@ -159,11 +159,11 @@ func (p *Provisioner) getServers(ctx context.Context, client regionapi.ClientWit
 
 	// Filter out servers that aren't from this cluster.
 	result := slices.DeleteFunc(*response.JSON200, func(server regionapi.ServerRead) bool {
-		if server.Spec.Tags == nil {
+		if server.Metadata.Tags == nil {
 			return true
 		}
 
-		index := slices.IndexFunc(*server.Spec.Tags, func(tag regionapi.Tag) bool {
+		index := slices.IndexFunc(*server.Metadata.Tags, func(tag coreapi.Tag) bool {
 			return tag.Name == coreconstants.ComputeClusterLabel && tag.Value == p.cluster.Name
 		})
 
@@ -187,7 +187,7 @@ func (p *Provisioner) getProvisionedServerSet(ctx context.Context, client region
 
 	for _, server := range *servers {
 		// find the workload pool tag
-		index := slices.IndexFunc(*server.Spec.Tags, func(tag regionapi.Tag) bool {
+		index := slices.IndexFunc(*server.Metadata.Tags, func(tag coreapi.Tag) bool {
 			return tag.Name == WorkloadPoolLabel
 		})
 
@@ -195,7 +195,7 @@ func (p *Provisioner) getProvisionedServerSet(ctx context.Context, client region
 			continue
 		}
 
-		poolName := (*server.Spec.Tags)[index].Value
+		poolName := (*server.Metadata.Tags)[index].Value
 		if _, exists := result[poolName]; !exists {
 			result[poolName] = make(computeprovisioners.ProvisionedServerSet)
 		}
