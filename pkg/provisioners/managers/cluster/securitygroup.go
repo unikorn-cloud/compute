@@ -121,8 +121,8 @@ func (p *Provisioner) createSecurityGroup(ctx context.Context, client regionapi.
 	return nil
 }
 
-func (p *Provisioner) deleteSecurityGroup(ctx context.Context, client regionapi.ClientWithResponsesInterface, ID string) error {
-	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDSecuritygroupsSecurityGroupIDWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], ID)
+func (p *Provisioner) deleteSecurityGroup(ctx context.Context, client regionapi.ClientWithResponsesInterface, id string) error {
+	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDSecuritygroupsSecurityGroupIDWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], id)
 	if err != nil {
 		return err
 	}
@@ -140,6 +140,7 @@ func (p *Provisioner) createSecurityGroupRule(ctx context.Context, client region
 	if rule.Port.Number != nil {
 		port.Number = rule.Port.Number
 	}
+
 	if rule.Port.Range != nil {
 		port.Range = &regionapi.SecurityGroupRulePortRange{
 			Start: rule.Port.Range.Start,
@@ -190,7 +191,8 @@ func (p *Provisioner) securityGroupName(pool *unikornv1.ComputeClusterWorkloadPo
 	return fmt.Sprintf("%s-%s", p.cluster.Name, pool.Name)
 }
 
-func (p *Provisioner) compareFirewallRuleLists(provisioned regionapi.SecurityGroupRulesRead, desired []unikornv1.FirewallRule) (toDelete, toCreate []string) {
+func (p *Provisioner) compareFirewallRuleLists(provisioned regionapi.SecurityGroupRulesRead, desired []unikornv1.FirewallRule) ([]string, []string) {
+	toDelete, toCreate := []string{}, []string{}
 	provisionedSet := make(map[string]struct{})
 	desiredSet := make(map[string]struct{})
 
@@ -240,11 +242,7 @@ func (p *Provisioner) getSecurityGroups(ctx context.Context, client regionapi.Cl
 			return tag.Name == coreconstants.ComputeClusterLabel && tag.Value == p.cluster.Name
 		})
 
-		if index < 0 {
-			return true
-		}
-
-		return false
+		return index < 0
 	})
 
 	return &result, nil
@@ -258,7 +256,8 @@ func (p *Provisioner) getProvisionedSecurityGroupSet(ctx context.Context, client
 
 	result := make(computeprovisioners.WorkloadPoolProvisionedSecurityGroupSet)
 
-	for _, sg := range *securitygroups {
+	for i := range *securitygroups {
+		sg := (*securitygroups)[i]
 		// find the security group tag
 		index := slices.IndexFunc(*sg.Metadata.Tags, func(tag coreapi.Tag) bool {
 			return tag.Name == WorkloadPoolLabel

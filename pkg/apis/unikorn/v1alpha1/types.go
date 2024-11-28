@@ -29,7 +29,7 @@ type ComputeWorkloadPoolSpec struct {
 	// Name is the name of the pool.
 	Name string `json:"name"`
 	// PublicIPAllocation is the workload pool public IP allocation configuration.
-	PublicIPAllocation *PublicIPAllocationSpec `json:"publicIPAllocation,omitempty"`
+	PublicIPAllocation *PublicIPAllocationSpec `json:"publicIpAllocation,omitempty"`
 	// Firewall is the workload pool firewall configuration.
 	Firewall *FirewallSpec `json:"firewall,omitempty"`
 }

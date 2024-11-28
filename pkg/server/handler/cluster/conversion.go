@@ -27,6 +27,7 @@ import (
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/compute/pkg/openapi"
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
+	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	coreopenapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
@@ -110,7 +111,7 @@ func convertFirewall(in *unikornv1.FirewallSpec) *openapi.Firewall {
 		}
 	}
 
-	var ingress []openapi.FirewallRule
+	ingress := []openapi.FirewallRule{}
 	for _, rule := range grouped {
 		ingress = append(ingress, *rule)
 	}
@@ -289,9 +290,12 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 			return nil, err
 		}
 
-		firewall, err := g.generateFirewall(pool)
-		if err != nil {
-			return nil, err
+		var firewall *unikornv1.FirewallSpec
+		if pool.Machine.Firewall != nil && pool.Machine.Firewall.Ingress != nil {
+			firewall, err = g.generateFirewall(pool)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		workloadPool := unikornv1.ComputeClusterWorkloadPoolsPoolSpec{
@@ -321,14 +325,6 @@ func (g *generator) generatePublicIPAllocation(request *openapi.ComputeClusterWo
 }
 
 func (g *generator) generateFirewall(request *openapi.ComputeClusterWorkloadPool) (*unikornv1.FirewallSpec, error) {
-	if request.Machine.Firewall == nil {
-		return nil, nil
-	}
-
-	if request.Machine.Firewall.Ingress == nil {
-		return nil, nil
-	}
-
 	firewall := &unikornv1.FirewallSpec{
 		Ingress: []unikornv1.FirewallRule{},
 	}
@@ -438,7 +434,7 @@ func (g *generator) lookupFlavor(ctx context.Context, request *openapi.ComputeCl
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("unable to retrieve flavors expected 200 got %d", resp.StatusCode())
+		return nil, fmt.Errorf("%w: flavor GET expected 200 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
 	}
 
 	flavors := *resp.JSON200

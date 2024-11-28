@@ -17,6 +17,6 @@ limitations under the License.
 package cluster
 
 const (
-	// WorkloadPoolLabel is the label key for the workload pool
+	// WorkloadPoolLabel is the label key for the workload pool.
 	WorkloadPoolLabel = "unikorn-cloud.org/workloadpool"
 )

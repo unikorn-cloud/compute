@@ -84,6 +84,22 @@ spec:
               regionId:
                 description: Region to provision the cluster in.
                 type: string
+              tags:
+                description: Tags are aribrary user data.
+                items:
+                  description: Tag is an arbirary key/value.
+                  properties:
+                    name:
+                      description: Name of the tag.
+                      type: string
+                    value:
+                      description: Value of the tag.
+                      type: string
+                  required:
+                  - name
+                  - value
+                  type: object
+                type: array
               workloadPools:
                 description: WorkloadPools defines the workload cluster topology.
                 properties:
@@ -171,7 +187,7 @@ spec:
                         name:
                           description: Name is the name of the pool.
                           type: string
-                        publicIPAllocation:
+                        publicIpAllocation:
                           description: PublicIPAllocation is the workload pool public
                             IP allocation configuration.
                           properties:

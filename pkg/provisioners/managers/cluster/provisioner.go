@@ -264,8 +264,6 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 		if err := p.reconcileServers(clientContext, client, &pool, servers, securityGroups, options); err != nil {
 			return err
 		}
-
-		// TODO: SSH/Ansible
 	}
 
 	return nil

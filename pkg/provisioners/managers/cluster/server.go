@@ -121,12 +121,13 @@ func (p *Provisioner) serverName(pool *unikornv1.ComputeClusterWorkloadPoolsPool
 	return fmt.Sprintf("%s-%d", pool.Name, replicaIndex)
 }
 
-// serverReconciliationList compares the provisioned servers with the desired servers and returns the name of the servers to delete and to create
-func (p *Provisioner) serverReconciliationList(provisioned computeprovisioners.ProvisionedServerSet, desired *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) (toDelete, toCreate []string) {
+// serverReconciliationList compares the provisioned servers with the desired servers and returns the name of the servers to delete and to create.
+func (p *Provisioner) serverReconciliationList(provisioned computeprovisioners.ProvisionedServerSet, desired *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) ([]string, []string) {
+	toDelete, toCreate := []string{}, []string{}
 	desiredSet := make(map[string]struct{})
 
 	// build a set of desired server names based on the replica count
-	for i := 0; i < *desired.Replicas; i++ {
+	for i := range *desired.Replicas {
 		desiredSet[p.serverName(desired, i)] = struct{}{}
 	}
 
@@ -167,11 +168,7 @@ func (p *Provisioner) getServers(ctx context.Context, client regionapi.ClientWit
 			return tag.Name == coreconstants.ComputeClusterLabel && tag.Value == p.cluster.Name
 		})
 
-		if index < 0 {
-			return true
-		}
-
-		return false
+		return index < 0
 	})
 
 	return &result, nil
