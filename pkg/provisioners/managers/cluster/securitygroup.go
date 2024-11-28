@@ -151,6 +151,7 @@ func (p *Provisioner) createSecurityGroupRule(ctx context.Context, client region
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        rule.ID,
 			Description: ptr.To("Security group rule for cluster " + p.cluster.Name),
+			Tags:        p.tags(pool),
 		},
 		Spec: regionapi.SecurityGroupRuleWriteSpec{
 			Direction: regionapi.SecurityGroupRuleWriteSpecDirectionIngress,
