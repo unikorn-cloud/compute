@@ -29,6 +29,7 @@ import (
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/provisioners"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
+
 	"k8s.io/utils/ptr"
 )
 
@@ -234,15 +235,7 @@ func (p *Provisioner) getSecurityGroups(ctx context.Context, client regionapi.Cl
 
 	// Filter out security groups that aren't from this cluster.
 	result := slices.DeleteFunc(*response.JSON200, func(sg regionapi.SecurityGroupRead) bool {
-		if sg.Metadata.Tags == nil {
-			return true
-		}
-
-		index := slices.IndexFunc(*sg.Metadata.Tags, func(tag coreapi.Tag) bool {
-			return tag.Name == coreconstants.ComputeClusterLabel && tag.Value == p.cluster.Name
-		})
-
-		return index < 0
+		return p.filterComputeCluster(sg.Metadata.Tags)
 	})
 
 	return &result, nil

@@ -160,18 +160,22 @@ func (p *Provisioner) getServers(ctx context.Context, client regionapi.ClientWit
 
 	// Filter out servers that aren't from this cluster.
 	result := slices.DeleteFunc(*response.JSON200, func(server regionapi.ServerRead) bool {
-		if server.Metadata.Tags == nil {
-			return true
-		}
-
-		index := slices.IndexFunc(*server.Metadata.Tags, func(tag coreapi.Tag) bool {
-			return tag.Name == coreconstants.ComputeClusterLabel && tag.Value == p.cluster.Name
-		})
-
-		return index < 0
+		return p.filterComputeCluster(server.Metadata.Tags)
 	})
 
 	return &result, nil
+}
+
+func (p *Provisioner) filterComputeCluster(tags *coreapi.TagList) bool {
+	if tags == nil {
+		return true
+	}
+
+	index := slices.IndexFunc(*tags, func(tag coreapi.Tag) bool {
+		return tag.Name == coreconstants.ComputeClusterLabel && tag.Value == p.cluster.Name
+	})
+
+	return index < 0
 }
 
 func (p *Provisioner) getProvisionedServerSet(ctx context.Context, client regionapi.ClientWithResponsesInterface) (computeprovisioners.WorkloadPoolProvisionedServerSet, error) {
