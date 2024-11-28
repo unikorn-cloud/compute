@@ -244,14 +244,24 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 		return err
 	}
 
+	servers, err := p.getProvisionedServerSet(clientContext, client)
+	if err != nil {
+		return err
+	}
+
+	securityGroups, err := p.getProvisionedSecurityGroupSet(clientContext, client)
+	if err != nil {
+		return err
+	}
+
 	for _, pool := range p.cluster.Spec.WorkloadPools.Pools {
 		// reconcile security groups
-		if err := p.reconcileSecurityGroup(clientContext, client, &pool); err != nil {
+		if err := p.reconcileSecurityGroup(clientContext, client, &pool, securityGroups); err != nil {
 			return err
 		}
 
 		// reconcile servers
-		if err := p.reconcileServers(clientContext, client, &pool, options.ProviderNetwork.NetworkID); err != nil {
+		if err := p.reconcileServers(clientContext, client, &pool, servers, securityGroups, options); err != nil {
 			return err
 		}
 

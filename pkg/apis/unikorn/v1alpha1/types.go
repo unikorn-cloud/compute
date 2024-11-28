@@ -135,36 +135,4 @@ type ComputeClusterStatus struct {
 	Namespace string `json:"namespace,omitempty"`
 	// Current service state of a Compute cluster.
 	Conditions []unikornv1core.Condition `json:"conditions,omitempty"`
-	// WorkloadPools contains the status of the workload pools.
-	WorkloadPools []ComputeClusterWorkloadPoolStatus `json:"pools,omitempty"`
-}
-
-type ComputeClusterWorkloadPoolStatus struct {
-	// Name is the name of the pool.
-	Name string `json:"name"`
-	// Firewall is the workload pool firewall status.
-	Firewall *FirewallStatus `json:"firewall,omitempty"`
-	// Servers is the workload pool servers status.
-	Servers []WorkloadPoolServerStatus `json:"servers,omitempty"`
-}
-
-type FirewallStatus struct {
-	// ProviderID is the provider firewall identifier.
-	ProviderID *string `json:"id,omitempty"`
-	// Ingress is a list of firewall rules applied to a workload pool.
-	Ingress []FirewallRuleStatus `json:"ingress,omitempty"`
-}
-
-type FirewallRuleStatus struct {
-	// ID is the firewall rule identifier.
-	ID string `json:"id,omitempty"`
-	// ProviderID is the firewall rule provider identifier.
-	ProviderID *string `json:"providerId,omitempty"`
-}
-
-type WorkloadPoolServerStatus struct {
-	// Name is the server name.
-	Name string `json:"name"`
-	// ProviderID is the provider server identifier.
-	ProviderID *string `json:"providerId,omitempty"`
 }

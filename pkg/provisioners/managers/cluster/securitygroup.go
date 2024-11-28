@@ -23,6 +23,7 @@ import (
 	"slices"
 
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
+	computeprovisioners "github.com/unikorn-cloud/compute/pkg/provisioners"
 	coreconstants "github.com/unikorn-cloud/core/pkg/constants"
 	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
@@ -31,7 +32,75 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func (p *Provisioner) createSecurityGroup(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) (*regionapi.SecurityGroupRead, error) {
+func (p *Provisioner) reconcileSecurityGroup(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securitygroups computeprovisioners.WorkloadPoolProvisionedSecurityGroupSet) error {
+	provisionedSecurityGroup := securitygroups[pool.Name]
+
+	if provisionedSecurityGroup == nil && pool.Firewall == nil {
+		// nothing to do
+		return nil
+	}
+
+	if provisionedSecurityGroup != nil && pool.Firewall == nil {
+		if err := p.deleteSecurityGroup(ctx, client, provisionedSecurityGroup.Metadata.Id); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	if provisionedSecurityGroup == nil && pool.Firewall != nil {
+		if err := p.createSecurityGroup(ctx, client, pool); err != nil {
+			return err
+		}
+
+		// wait until security group is created before creating rules and servers
+		return provisioners.ErrYield
+	}
+
+	if err := p.reconcileSecurityGroupRules(ctx, client, pool, provisionedSecurityGroup); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Provisioner) reconcileSecurityGroupRules(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securitygroup *regionapi.SecurityGroupRead) error {
+	if securitygroup == nil {
+		// wait until security group is created
+		return provisioners.ErrYield
+	}
+
+	provisionedRules, err := p.getSecurityGroupRules(ctx, client, securitygroup.Metadata.Id)
+	if err != nil {
+		return err
+	}
+
+	toDelete, toCreate := p.compareFirewallRuleLists(provisionedRules, pool.Firewall.Ingress)
+
+	for _, id := range toDelete {
+		index := slices.IndexFunc(provisionedRules, func(rule regionapi.SecurityGroupRuleRead) bool {
+			return rule.Metadata.Name == id
+		})
+
+		if err := p.deleteSecurityGroupRule(ctx, client, securitygroup.Metadata.Id, (provisionedRules)[index].Metadata.Id); err != nil {
+			return err
+		}
+	}
+
+	for _, id := range toCreate {
+		index := slices.IndexFunc(pool.Firewall.Ingress, func(rule unikornv1.FirewallRule) bool {
+			return rule.ID == id
+		})
+
+		if err := p.createSecurityGroupRule(ctx, client, pool, securitygroup.Metadata.Id, &pool.Firewall.Ingress[index]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *Provisioner) createSecurityGroup(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) error {
 	request := regionapi.SecurityGroupWrite{
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        p.securityGroupName(pool),
@@ -44,14 +113,14 @@ func (p *Provisioner) createSecurityGroup(ctx context.Context, client regionapi.
 
 	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDSecuritygroupsWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], request)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return nil, fmt.Errorf("%w: securitygroup POST expected 201 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
+		return fmt.Errorf("%w: securitygroup POST expected 201 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
 	}
 
-	return resp.JSON201, nil
+	return nil
 }
 
 func (p *Provisioner) deleteSecurityGroup(ctx context.Context, client regionapi.ClientWithResponsesInterface, ID string) error {
@@ -67,11 +136,7 @@ func (p *Provisioner) deleteSecurityGroup(ctx context.Context, client regionapi.
 	return nil
 }
 
-func (p *Provisioner) securityGroupRuleName(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) string {
-	return fmt.Sprintf("%s-%s", p.cluster.Name, pool.Name)
-}
-
-func (p *Provisioner) createSecurityGroupRule(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securityGroupID *string, rule *unikornv1.FirewallRule) (*regionapi.SecurityGroupRuleRead, error) {
+func (p *Provisioner) createSecurityGroupRule(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securityGroupID string, rule *unikornv1.FirewallRule) error {
 	port := &regionapi.SecurityGroupRulePort{}
 
 	if rule.Port.Number != nil {
@@ -86,7 +151,7 @@ func (p *Provisioner) createSecurityGroupRule(ctx context.Context, client region
 
 	request := regionapi.SecurityGroupRuleWrite{
 		Metadata: coreapi.ResourceWriteMetadata{
-			Name:        p.securityGroupRuleName(pool),
+			Name:        rule.ID,
 			Description: ptr.To("Security group rule for cluster " + p.cluster.Name),
 		},
 		Spec: regionapi.SecurityGroupRuleWriteSpec{
@@ -97,16 +162,16 @@ func (p *Provisioner) createSecurityGroupRule(ctx context.Context, client region
 		},
 	}
 
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDSecuritygroupsSecurityGroupIDRulesWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], *securityGroupID, request)
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDSecuritygroupsSecurityGroupIDRulesWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], securityGroupID, request)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return nil, fmt.Errorf("%w: securitygrouprule POST expected 201 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
+		return fmt.Errorf("%w: securitygrouprule POST expected 201 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
 	}
 
-	return resp.JSON201, nil
+	return nil
 }
 
 func (p *Provisioner) deleteSecurityGroupRule(ctx context.Context, client regionapi.ClientWithResponsesInterface, securityGroupID, ruleID string) error {
@@ -126,139 +191,13 @@ func (p *Provisioner) securityGroupName(pool *unikornv1.ComputeClusterWorkloadPo
 	return fmt.Sprintf("%s-%s", p.cluster.Name, pool.Name)
 }
 
-func (p *Provisioner) lookupPoolSecurityGroup(securityGroups *regionapi.SecurityGroupsRead, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *regionapi.SecurityGroupRead {
-	sg := *securityGroups
-
-	index := slices.IndexFunc(sg, func(sg regionapi.SecurityGroupRead) bool {
-		return sg.Metadata.Name == p.securityGroupName(pool)
-	})
-
-	if index >= 0 {
-		return &sg[index]
-	}
-
-	return nil
-}
-
-func (p *Provisioner) reconcileSecurityGroup(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) error {
-	firewallStatus := p.lookupWorkloadPoolFirewallStatus(pool)
-
-	if firewallStatus.ProviderID == nil && pool.Firewall == nil {
-		// nothing to do
-		return nil
-	}
-
-	if firewallStatus.ProviderID != nil && pool.Firewall == nil {
-		if err := p.deleteSecurityGroup(ctx, client, *firewallStatus.ProviderID); err != nil {
-			return err
-		}
-
-		firewallStatus.ProviderID = nil
-		firewallStatus.Ingress = nil
-	}
-
-	if firewallStatus.ProviderID == nil && pool.Firewall != nil {
-		resp, err := p.createSecurityGroup(ctx, client, pool)
-		if err != nil {
-			return err
-		}
-
-		// update status
-		firewallStatus.ProviderID = &resp.Metadata.Id
-	}
-
-	if err := p.reconcileSecurityGroupRules(ctx, client, pool); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (p *Provisioner) reconcileSecurityGroupRules(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) error {
-	firewallStatus := p.lookupWorkloadPoolFirewallStatus(pool)
-	if firewallStatus.ProviderID == nil {
-		// wait until security group is created
-		return provisioners.ErrYield
-	}
-
-	toDelete, toCreate := p.compareFirewallRuleLists(firewallStatus.Ingress, pool.Firewall.Ingress)
-
-	for _, id := range toDelete {
-		index := slices.IndexFunc(firewallStatus.Ingress, func(rs unikornv1.FirewallRuleStatus) bool {
-			return rs.ID == id
-		})
-
-		if err := p.deleteSecurityGroupRule(ctx, client, *firewallStatus.ProviderID, *firewallStatus.Ingress[index].ProviderID); err != nil {
-			return err
-		}
-
-		p.patchWorkloadPoolFirewallIngressStatus(firewallStatus, id, nil)
-	}
-
-	for _, id := range toCreate {
-		index := slices.IndexFunc(pool.Firewall.Ingress, func(rule unikornv1.FirewallRule) bool {
-			return rule.ID == id
-		})
-
-		resp, err := p.createSecurityGroupRule(ctx, client, pool, firewallStatus.ProviderID, &pool.Firewall.Ingress[index])
-		if err != nil {
-			return err
-		}
-
-		p.patchWorkloadPoolFirewallIngressStatus(firewallStatus, pool.Firewall.Ingress[index].ID, &resp.Metadata.Id)
-	}
-
-	return nil
-}
-
-func (p *Provisioner) patchWorkloadPoolFirewallIngressStatus(firewallStatus *unikornv1.FirewallStatus, ruleID string, providerID *string) {
-	index := slices.IndexFunc(firewallStatus.Ingress, func(rule unikornv1.FirewallRuleStatus) bool {
-		return rule.ID == ruleID
-	})
-
-	if index >= 0 {
-		firewallStatus.Ingress[index].ProviderID = providerID
-		return
-	}
-
-	firewallStatus.Ingress = append(firewallStatus.Ingress, unikornv1.FirewallRuleStatus{
-		ID:         ruleID,
-		ProviderID: providerID,
-	})
-}
-
-func (p *Provisioner) lookupWorkloadPoolStatus(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *unikornv1.ComputeClusterWorkloadPoolStatus {
-	index := slices.IndexFunc(p.cluster.Status.WorkloadPools, func(wp unikornv1.ComputeClusterWorkloadPoolStatus) bool {
-		return wp.Name == pool.Name
-	})
-
-	if index < 0 {
-		p.cluster.Status.WorkloadPools = append(p.cluster.Status.WorkloadPools, unikornv1.ComputeClusterWorkloadPoolStatus{
-			Name:     pool.Name,
-			Firewall: &unikornv1.FirewallStatus{},
-		})
-
-		return &p.cluster.Status.WorkloadPools[len(p.cluster.Status.WorkloadPools)-1]
-	}
-
-	return &p.cluster.Status.WorkloadPools[index]
-}
-
-func (p *Provisioner) lookupWorkloadPoolFirewallStatus(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *unikornv1.FirewallStatus {
-	poolStatus := p.lookupWorkloadPoolStatus(pool)
-
-	return poolStatus.Firewall
-}
-
-func (p *Provisioner) compareFirewallRuleLists(provisioned []unikornv1.FirewallRuleStatus, desired []unikornv1.FirewallRule) (toDelete, toCreate []string) {
+func (p *Provisioner) compareFirewallRuleLists(provisioned regionapi.SecurityGroupRulesRead, desired []unikornv1.FirewallRule) (toDelete, toCreate []string) {
 	provisionedSet := make(map[string]struct{})
 	desiredSet := make(map[string]struct{})
 
 	// populate sets
 	for _, rule := range provisioned {
-		if rule.ProviderID != nil {
-			provisionedSet[rule.ID] = struct{}{}
-		}
+		provisionedSet[rule.Metadata.Name] = struct{}{}
 	}
 
 	for _, rule := range desired {
@@ -280,4 +219,72 @@ func (p *Provisioner) compareFirewallRuleLists(provisioned []unikornv1.FirewallR
 	}
 
 	return toDelete, toCreate
+}
+
+func (p *Provisioner) getSecurityGroups(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*regionapi.SecurityGroupsResponse, error) {
+	response, err := client.GetApiV1OrganizationsOrganizationIDSecuritygroupsWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel])
+	if err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode() != http.StatusOK {
+		return nil, fmt.Errorf("%w: securitygroup GET expected 200 got %d", coreerrors.ErrAPIStatus, response.StatusCode())
+	}
+
+	// Filter out security groups that aren't from this cluster.
+	result := slices.DeleteFunc(*response.JSON200, func(sg regionapi.SecurityGroupRead) bool {
+		if sg.Spec.Tags == nil {
+			return true
+		}
+
+		index := slices.IndexFunc(*sg.Spec.Tags, func(tag regionapi.Tag) bool {
+			return tag.Name == coreconstants.ComputeClusterLabel && tag.Value == p.cluster.Name
+		})
+
+		if index < 0 {
+			return true
+		}
+
+		return false
+	})
+
+	return &result, nil
+}
+
+func (p *Provisioner) getProvisionedSecurityGroupSet(ctx context.Context, client regionapi.ClientWithResponsesInterface) (computeprovisioners.WorkloadPoolProvisionedSecurityGroupSet, error) {
+	securitygroups, err := p.getSecurityGroups(ctx, client)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(computeprovisioners.WorkloadPoolProvisionedSecurityGroupSet)
+
+	for _, sg := range *securitygroups {
+		// find the security group tag
+		index := slices.IndexFunc(*sg.Spec.Tags, func(tag regionapi.Tag) bool {
+			return tag.Name == WorkloadPoolLabel
+		})
+
+		if index < 0 {
+			continue
+		}
+
+		poolName := (*sg.Spec.Tags)[index].Value
+		result[poolName] = &sg
+	}
+
+	return result, nil
+}
+
+func (p *Provisioner) getSecurityGroupRules(ctx context.Context, client regionapi.ClientWithResponsesInterface, securityGroupID string) (regionapi.SecurityGroupRulesResponse, error) {
+	response, err := client.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDSecuritygroupsSecurityGroupIDRulesWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], securityGroupID)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode() != http.StatusOK {
+		return nil, fmt.Errorf("%w: securitygrouprule GET expected 200 got %d", coreerrors.ErrAPIStatus, response.StatusCode())
+	}
+
+	return *response.JSON200, nil
 }

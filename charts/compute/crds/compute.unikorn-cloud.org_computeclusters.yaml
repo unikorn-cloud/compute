@@ -249,52 +249,6 @@ spec:
               namespace:
                 description: Namespace defines the namespace a cluster resides in.
                 type: string
-              pools:
-                description: WorkloadPools contains the status of the workload pools.
-                items:
-                  properties:
-                    firewall:
-                      description: Firewall is the workload pool firewall status.
-                      properties:
-                        id:
-                          description: ProviderID is the provider firewall identifier.
-                          type: string
-                        ingress:
-                          description: Ingress is a list of firewall rules applied
-                            to a workload pool.
-                          items:
-                            properties:
-                              id:
-                                description: ID is the firewall rule identifier.
-                                type: string
-                              providerId:
-                                description: ProviderID is the firewall rule provider
-                                  identifier.
-                                type: string
-                            type: object
-                          type: array
-                      type: object
-                    name:
-                      description: Name is the name of the pool.
-                      type: string
-                    servers:
-                      description: Servers is the workload pool servers status.
-                      items:
-                        properties:
-                          name:
-                            description: Name is the server name.
-                            type: string
-                          providerId:
-                            description: ProviderID is the provider server identifier.
-                            type: string
-                        required:
-                        - name
-                        type: object
-                      type: array
-                  required:
-                  - name
-                  type: object
-                type: array
             type: object
         required:
         - spec
