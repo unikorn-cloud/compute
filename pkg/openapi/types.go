@@ -5,6 +5,7 @@ package openapi
 
 import (
 	externalRef0 "github.com/unikorn-cloud/core/pkg/openapi"
+	externalRef1 "github.com/unikorn-cloud/region/pkg/openapi"
 )
 
 const (
@@ -109,9 +110,6 @@ type ComputeClusterWrite struct {
 // ComputeClusters A list of Compute clusters.
 type ComputeClusters = []ComputeClusterRead
 
-// ComputeNameParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type ComputeNameParameter = string
-
 // Firewall A list of firewall rules applied to a workload pool.
 type Firewall struct {
 	// Ingress A list of firewall rules applied to a workload pool.
@@ -156,29 +154,38 @@ type FirewallRules = []FirewallRule
 
 // ImageSelector A server image selector.
 type ImageSelector struct {
-	// Os The operating system to use.
-	Os string `json:"os"`
+	// Distro A distribution name.
+	Distro externalRef1.OsDistro `json:"distro"`
 
-	// Version The operating system version to use.
-	Version string `json:"version"`
+	// Variant The operating system variant.
+	Variant *string `json:"variant,omitempty"`
+
+	// Version The operating system version to use, if not defined it will use the latest.
+	Version *string `json:"version,omitempty"`
 }
+
+// KubernetesNameParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+type KubernetesNameParameter = string
 
 // MachinePool A Compute cluster machine.
 type MachinePool struct {
+	// Disk A volume.
+	Disk *Volume `json:"disk,omitempty"`
+
 	// Firewall A list of firewall rules applied to a workload pool.
 	Firewall *Firewall `json:"firewall,omitempty"`
 
 	// FlavorId Flavor ID.
-	FlavorId *string `json:"flavorId,omitempty"`
+	FlavorId string `json:"flavorId"`
 
 	// Image A server image selector.
-	Image *ImageSelector `json:"image,omitempty"`
+	Image ImageSelector `json:"image"`
 
 	// PublicIPAllocation A public IP allocation settings.
 	PublicIPAllocation *PublicIPAllocation `json:"publicIPAllocation,omitempty"`
 
 	// Replicas Number of machines for a statically sized pool or the maximum for an auto-scaled pool.
-	Replicas *int `json:"replicas,omitempty"`
+	Replicas int `json:"replicas"`
 
 	// Ssh SSH settings.
 	Ssh *struct {
@@ -193,14 +200,23 @@ type PublicIPAllocation struct {
 	Enabled bool `json:"enabled"`
 }
 
+// Volume A volume.
+type Volume struct {
+	// Size Disk size in GiB.
+	Size int `json:"size"`
+}
+
 // ClusterIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type ClusterIDParameter = ComputeNameParameter
+type ClusterIDParameter = KubernetesNameParameter
 
 // OrganizationIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type OrganizationIDParameter = ComputeNameParameter
+type OrganizationIDParameter = KubernetesNameParameter
 
 // ProjectIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type ProjectIDParameter = ComputeNameParameter
+type ProjectIDParameter = KubernetesNameParameter
+
+// RegionIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+type RegionIDParameter = KubernetesNameParameter
 
 // ComputeClusterResponse Compute cluster read.
 type ComputeClusterResponse = ComputeClusterRead

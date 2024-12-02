@@ -78,8 +78,8 @@ func newGenerator(client client.Client, options *Options, region regionapi.Clien
 // convertMachine converts from a custom resource into the API definition.
 func convertMachine(in *unikornv1.ComputeWorkloadPoolSpec) *openapi.MachinePool {
 	machine := &openapi.MachinePool{
-		Replicas:           in.Replicas,
-		FlavorId:           in.FlavorID,
+		Replicas:           *in.Replicas,
+		FlavorId:           *in.FlavorID,
 		PublicIPAllocation: convertPublicIPAllocation(in.PublicIPAllocation),
 		Firewall:           convertFirewall(in.Firewall),
 		// TODO: Image
@@ -218,9 +218,8 @@ func convertList(in *unikornv1.ComputeClusterList) openapi.ComputeClusters {
 	return out
 }
 
-// defaultImage returns a default image for either control planes or workload pools
-// based on the specified Compute version.
-func (g *generator) defaultImage(ctx context.Context, request *openapi.ComputeClusterWrite) (*regionapi.Image, error) {
+// chooseImages returns an image for the requested machine and flavor.
+func (g *generator) chooseImage(ctx context.Context, request *openapi.ComputeClusterWrite, m *openapi.MachinePool, _ *regionapi.Flavor) (*regionapi.Image, error) {
 	resp, err := g.region.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
 		return nil, err
@@ -232,10 +231,39 @@ func (g *generator) defaultImage(ctx context.Context, request *openapi.ComputeCl
 
 	images := *resp.JSON200
 
+	// TODO: is the image compatible with the flavor virtualization type???
+	images = slices.DeleteFunc(images, func(image regionapi.Image) bool {
+		// Is it the right distro?
+		if image.Spec.Os.Distro != m.Image.Distro {
+			return true
+		}
+
+		// Is it the right variant?
+		if m.Image.Variant != nil {
+			if image.Spec.Os.Variant == nil {
+				return true
+			}
+
+			if *m.Image.Variant != *image.Spec.Os.Variant {
+				return true
+			}
+		}
+
+		// Is it the right version?
+		if m.Image.Version != nil {
+			if *m.Image.Version != image.Spec.Os.Version {
+				return true
+			}
+		}
+
+		return false
+	})
+
 	if len(images) == 0 {
 		return nil, errors.OAuth2ServerError("unable to select an image")
 	}
 
+	// Select the most recent, the region servie guarantees temporal ordering.
 	return &images[0], nil
 }
 
@@ -256,17 +284,13 @@ func (g *generator) generateNetwork() *unikornv1core.NetworkGeneric {
 
 // generateMachineGeneric generates a generic machine part of the cluster.
 func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi.ComputeClusterWrite, m *openapi.MachinePool, flavor *regionapi.Flavor) (*unikornv1core.MachineGeneric, error) {
-	if m.Replicas == nil {
-		m.Replicas = ptr.To(3)
-	}
-
-	image, err := g.defaultImage(ctx, request)
+	image, err := g.chooseImage(ctx, request, m, flavor)
 	if err != nil {
 		return nil, err
 	}
 
 	machine := &unikornv1core.MachineGeneric{
-		Replicas: m.Replicas,
+		Replicas: &m.Replicas,
 		ImageID:  ptr.To(image.Metadata.Id),
 		FlavorID: &flavor.Metadata.Id,
 	}
@@ -281,7 +305,7 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 	for i := range request.Spec.WorkloadPools {
 		pool := &request.Spec.WorkloadPools[i]
 
-		flavor, err := g.lookupFlavor(ctx, request, *pool.Machine.FlavorId)
+		flavor, err := g.lookupFlavor(ctx, request, pool.Machine.FlavorId)
 		if err != nil {
 			return nil, err
 		}
