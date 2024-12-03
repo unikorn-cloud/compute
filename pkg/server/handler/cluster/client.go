@@ -183,11 +183,11 @@ func (c *Client) createNetworkOpenstack(ctx context.Context, organizationID, pro
 
 	resp, err := c.region.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to physical network").WithError(err)
+		return nil, errors.OAuth2ServerError("unable to create network").WithError(err)
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return nil, errors.OAuth2ServerError("unable to create physical network")
+		return nil, errors.OAuth2ServerError("unable to create network")
 	}
 
 	return resp.JSON201, nil
@@ -255,7 +255,7 @@ func (c *Client) Create(ctx context.Context, organizationID, projectID string, r
 		return nil, err
 	}
 
-	cluster, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).generate(ctx, request)
+	cluster, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID, nil).generate(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -321,7 +321,7 @@ func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterI
 		return err
 	}
 
-	required, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).generate(ctx, request)
+	required, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID, current).generate(ctx, request)
 	if err != nil {
 		return err
 	}

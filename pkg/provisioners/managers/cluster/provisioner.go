@@ -187,7 +187,7 @@ func (p *Provisioner) getNetwork(ctx context.Context, client regionapi.ClientWit
 	}
 
 	if response.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("%w: physical network GET expected 200 got %d", coreerrors.ErrAPIStatus, response.StatusCode())
+		return nil, fmt.Errorf("%w: network GET expected 200 got %d", coreerrors.ErrAPIStatus, response.StatusCode())
 	}
 
 	resource := response.JSON200
@@ -197,7 +197,7 @@ func (p *Provisioner) getNetwork(ctx context.Context, client regionapi.ClientWit
 	case coreapi.ResourceProvisioningStatusProvisioned:
 		return resource, nil
 	case coreapi.ResourceProvisioningStatusUnknown, coreapi.ResourceProvisioningStatusProvisioning:
-		log.Info("waiting for physical network to become ready")
+		log.Info("waiting for network to become ready")
 
 		return nil, provisioners.ErrYield
 	}
@@ -221,7 +221,7 @@ func (p *Provisioner) identityOptions(ctx context.Context, client regionapi.Clie
 		Cloud:         *identity.Spec.Openstack.Cloud,
 		ServerGroupID: identity.Spec.Openstack.ServerGroupId,
 		ProviderNetwork: &computeprovisioners.ClusterOpenstackProviderOptions{
-			NetworkID: network.Spec.Openstack.NetworkId,
+			NetworkID: &network.Metadata.Id,
 			SubnetID:  network.Spec.Openstack.SubnetId,
 		},
 	}
@@ -239,12 +239,33 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 		return err
 	}
 
-	_, err = p.identityOptions(clientContext, client)
+	options, err := p.identityOptions(clientContext, client)
 	if err != nil {
 		return err
 	}
 
-	// TODO: do something!
+	servers, err := p.getProvisionedServerSet(clientContext, client)
+	if err != nil {
+		return err
+	}
+
+	securityGroups, err := p.getProvisionedSecurityGroupSet(clientContext, client)
+	if err != nil {
+		return err
+	}
+
+	for _, pool := range p.cluster.Spec.WorkloadPools.Pools {
+		// reconcile security groups
+		if err := p.reconcileSecurityGroup(clientContext, client, &pool, securityGroups); err != nil {
+			return err
+		}
+
+		// reconcile servers
+		if err := p.reconcileServers(clientContext, client, &pool, servers, securityGroups, options); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -265,4 +286,17 @@ func (p *Provisioner) Deprovision(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (p *Provisioner) tags(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *coreapi.TagList {
+	return &coreapi.TagList{
+		coreapi.Tag{
+			Name:  coreconstants.ComputeClusterLabel,
+			Value: p.cluster.Name,
+		},
+		coreapi.Tag{
+			Name:  WorkloadPoolLabel,
+			Value: pool.Name,
+		},
+	}
 }

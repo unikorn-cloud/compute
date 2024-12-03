@@ -160,11 +160,7 @@ components:
           type: string
           minLength: 1
         firewall:
-          description: A list of firewall rules applied to a workload pool.
-          type: object
-          properties:
-            ingress:
-              $ref: '#/components/schemas/firewallRules'
+          $ref: '#/components/schemas/firewall'
         publicIPAllocation:
           $ref: '#/components/schemas/publicIPAllocation'
         image:
@@ -178,6 +174,12 @@ components:
               type: array
               items:
                 type: string
+    firewall:
+      description: A list of firewall rules applied to a workload pool.
+      type: object
+      properties:
+        ingress:
+          $ref: '#/components/schemas/firewallRules'
     firewallRules:
       description: A list of firewall rules applied to a workload pool.
       type: array
@@ -518,3 +520,4 @@ components:
           authorizationUrl: https://identity.unikorn-cloud.org/oauth2/v2/authorization
           tokenUrl: https://identity.unikorn-cloud.org/oauth2/v2/token
           scopes: {}
+

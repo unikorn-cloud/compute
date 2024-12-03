@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"errors"
+	"fmt"
 
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/core/pkg/constants"
@@ -75,4 +76,12 @@ func (c *ComputeCluster) ResourceLabels() (labels.Set, error) {
 	}
 
 	return labels, nil
+}
+
+func (p *FirewallRulePort) String() string {
+	if p.Number != nil {
+		return fmt.Sprintf("%d", *p.Number)
+	}
+
+	return fmt.Sprintf("%d-%d", p.Range.Start, p.Range.End)
 }

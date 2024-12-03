@@ -16,6 +16,10 @@ limitations under the License.
 
 package provisioners
 
+import (
+	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
+)
+
 // ClusterOpenstackOptions are acquired from the region controller at
 // reconcile time as the identity provisioning is asynchronous.
 type ClusterOpenstackOptions struct {
@@ -42,3 +46,11 @@ type ClusterOpenstackProviderOptions struct {
 	// This is typically used to pass in bare-metal provider networks.
 	SubnetID *string
 }
+
+// WorkloadPoolProvisionedServerSet is a map of workload pool names to server sets.
+type WorkloadPoolProvisionedServerSet = map[string]ProvisionedServerSet
+
+// ProvisionedServerSet is a map of server names to server objects returned by the region API.
+type ProvisionedServerSet = map[string]regionapi.ServerRead
+
+type WorkloadPoolProvisionedSecurityGroupSet = map[string]*regionapi.SecurityGroupRead
