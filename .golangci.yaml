@@ -21,6 +21,8 @@ linters:
   - goconst
   - perfsprint
   - mnd
+  - execinquery
+  - exportloopref
 linters-settings:
   gci:
     sections:

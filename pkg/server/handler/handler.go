@@ -24,6 +24,7 @@ import (
 
 	"github.com/unikorn-cloud/compute/pkg/openapi"
 	"github.com/unikorn-cloud/compute/pkg/server/handler/cluster"
+	"github.com/unikorn-cloud/compute/pkg/server/handler/region"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/core/pkg/server/util"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
@@ -66,7 +67,7 @@ func New(client client.Client, namespace string, options *Options, issuer *ident
 }
 
 func (h *Handler) regionClient(ctx context.Context) (*regionapi.ClientWithResponses, error) {
-	token, err := h.issuer.Issue(ctx, "kubernetes-api")
+	token, err := h.issuer.Issue(ctx, "compute-api")
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +89,48 @@ func (h *Handler) setCacheable(w http.ResponseWriter) {
 
 func (h *Handler) setUncacheable(w http.ResponseWriter) {
 	w.Header().Add("Cache-Control", "no-cache")
+}
+
+func (h *Handler) GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavors(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, regionID openapi.RegionIDParameter) {
+	if err := rbac.AllowOrganizationScope(r.Context(), "compute:flavors", identityapi.Read, organizationID); err != nil {
+		errors.HandleError(w, r, err)
+		return
+	}
+
+	client, err := h.regionClient(r.Context())
+	if err != nil {
+		errors.HandleError(w, r, err)
+		return
+	}
+
+	result, err := region.Flavors(r.Context(), client, organizationID, regionID)
+	if err != nil {
+		errors.HandleError(w, r, errors.OAuth2ServerError("unable to read flavors").WithError(err))
+		return
+	}
+
+	util.WriteJSONResponse(w, r, http.StatusOK, result)
+}
+
+func (h *Handler) GetApiV1OrganizationsOrganizationIDRegionsRegionIDImages(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, regionID openapi.RegionIDParameter) {
+	if err := rbac.AllowOrganizationScope(r.Context(), "compute:images", identityapi.Read, organizationID); err != nil {
+		errors.HandleError(w, r, err)
+		return
+	}
+
+	client, err := h.regionClient(r.Context())
+	if err != nil {
+		errors.HandleError(w, r, err)
+		return
+	}
+
+	result, err := region.Images(r.Context(), client, organizationID, regionID)
+	if err != nil {
+		errors.HandleError(w, r, errors.OAuth2ServerError("unable to read flavors").WithError(err))
+		return
+	}
+
+	util.WriteJSONResponse(w, r, http.StatusOK, result)
 }
 
 func (h *Handler) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter) {

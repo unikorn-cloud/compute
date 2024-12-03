@@ -7,6 +7,46 @@ info:
     header.
   version: 0.1.0
 paths:
+  /api/v1/organizations/{organizationID}/regions/{regionID}/flavors:
+    description: |-
+      Compute flavor services.
+    parameters:
+    - $ref: '#/components/parameters/organizationIDParameter'
+    - $ref: '#/components/parameters/regionIDParameter'
+    get:
+      description: |-
+        Lists all compute compatible flavors that the user has access to.
+      security:
+      - oauth2Authentication: []
+      responses:
+        '200':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/main/pkg/openapi/server.spec.yaml#/components/responses/flavorsResponse'
+        '400':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/unauthorizedResponse'
+        '500':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/internalServerErrorResponse'
+  /api/v1/organizations/{organizationID}/regions/{regionID}/images:
+    description: |-
+      Compute image services.
+    parameters:
+    - $ref: '#/components/parameters/organizationIDParameter'
+    - $ref: '#/components/parameters/regionIDParameter'
+    get:
+      description: |-
+        Lists all compute compatible images that the user has access to.
+      security:
+      - oauth2Authentication: []
+      responses:
+        '200':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/main/pkg/openapi/server.spec.yaml#/components/responses/imagesResponse'
+        '400':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/unauthorizedResponse'
+        '500':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/internalServerErrorResponse'
   /api/v1/organizations/{organizationID}/clusters:
     description: Cluster services.
     parameters:
@@ -109,7 +149,7 @@ components:
         The organization name.
       required: true
       schema:
-        $ref: '#/components/schemas/computeNameParameter'
+        $ref: '#/components/schemas/kubernetesNameParameter'
     projectIDParameter:
       name: projectID
       in: path
@@ -117,7 +157,14 @@ components:
         The project name.
       required: true
       schema:
-        $ref: '#/components/schemas/computeNameParameter'
+        $ref: '#/components/schemas/kubernetesNameParameter'
+    regionIDParameter:
+      name: regionID
+      in: path
+      description: The region identifier.
+      required: true
+      schema:
+        $ref: '#/components/schemas/kubernetesNameParameter'
     clusterIDParameter:
       name: clusterID
       in: path
@@ -127,9 +174,9 @@ components:
         63 characters in length.
       required: true
       schema:
-        $ref: '#/components/schemas/computeNameParameter'
+        $ref: '#/components/schemas/kubernetesNameParameter'
   schemas:
-    computeNameParameter:
+    kubernetesNameParameter:
       description: A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
       type: string
       minLength: 1
@@ -147,9 +194,22 @@ components:
           items:
             description: A DNS nameserver IPv4 address.
             type: string
+    volume:
+      description: A volume.
+      type: object
+      required:
+      - size
+      properties:
+        size:
+          description: Disk size in GiB.
+          type: integer
     machinePool:
       description: A Compute cluster machine.
       type: object
+      required:
+      - replicas
+      - flavorId
+      - image
       properties:
         replicas:
           description: Number of machines for a statically sized pool or the maximum
@@ -159,6 +219,8 @@ components:
           description: Flavor ID.
           type: string
           minLength: 1
+        disk:
+          $ref: '#/components/schemas/volume'
         firewall:
           $ref: '#/components/schemas/firewall'
         publicIPAllocation:
@@ -241,14 +303,15 @@ components:
       description: A server image selector.
       type: object
       required:
-      - os
-      - version
+      - distro
       properties:
-        os:
-          description: The operating system to use.
+        distro:
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/main/pkg/openapi/server.spec.yaml#/components/schemas/osDistro'
+        variant:
+          description: The operating system variant.
           type: string
         version:
-          description: The operating system version to use.
+          description: The operating system version to use, if not defined it will use the latest.
           type: string
     computeClusterWorkloadPool:
       description: A Compute cluster workload pool.
@@ -379,6 +442,9 @@ components:
               - name: default
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
+                  image:
+                    distro: ubuntu
+                    version: '24.04'
                   replicas: 3
                 firewall:
                   ingress:
@@ -425,6 +491,9 @@ components:
               - name: default
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
+                  image:
+                    distro: ubuntu
+                    version: '24.04'
                   replicas: 3
                 firewall:
                   ingress:
@@ -444,8 +513,10 @@ components:
                 publicIPAllocation:
                   enabled: true
                 image:
-                  os: ubuntu
-                  version: 20.04
+                  kernel: linux
+                  family: debian
+                  distro: ubuntu
+                  version: '20.04'
                 ssh:
                   publicKeys:
                   - ssh-rsa AAA3NzC1yc2AAADAQABAABgQDZ6...
@@ -478,6 +549,9 @@ components:
               - name: default
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
+                  image:
+                    distro: ubuntu
+                    version: '24.04'
                   replicas: 3
                 firewall:
                   ingress:
@@ -497,7 +571,9 @@ components:
                 publicIPAllocation:
                   enabled: true
                 image:
-                  os: ubuntu
+                  kernel: linux
+                  family: debian
+                  dsitro: ubuntu
                   version: 20.04
                 ssh:
                   publicKeys:
