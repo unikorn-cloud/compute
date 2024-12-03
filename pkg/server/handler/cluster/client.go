@@ -84,8 +84,6 @@ func NewClient(client client.Client, namespace string, options *Options, region 
 
 // List returns all clusters owned by the implicit control plane.
 func (c *Client) List(ctx context.Context, organizationID string) (openapi.ComputeClusters, error) {
-	result := &unikornv1.ComputeClusterList{}
-
 	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
 	if err != nil {
 		return nil, errors.OAuth2ServerError("failed to build label selector").WithError(err)
@@ -98,6 +96,8 @@ func (c *Client) List(ctx context.Context, organizationID string) (openapi.Compu
 		LabelSelector: selector,
 	}
 
+	result := &unikornv1.ComputeClusterList{}
+
 	if err := c.client.List(ctx, result, options); err != nil {
 		return nil, errors.OAuth2ServerError("failed to list clusters").WithError(err)
 	}
@@ -106,7 +106,7 @@ func (c *Client) List(ctx context.Context, organizationID string) (openapi.Compu
 		return strings.Compare(a.Name, b.Name)
 	})
 
-	return convertList(result), nil
+	return newGenerator(c.client, c.options, c.region, "", organizationID, "", nil).convertList(ctx, result)
 }
 
 // get returns the cluster.
@@ -273,7 +273,7 @@ func (c *Client) Create(ctx context.Context, organizationID, projectID string, r
 		return nil, errors.OAuth2ServerError("failed to create cluster").WithError(err)
 	}
 
-	return convert(cluster), nil
+	return newGenerator(c.client, c.options, c.region, "", organizationID, "", nil).convert(ctx, cluster)
 }
 
 // Delete deletes the implicit cluster indentified by the JTW claims.

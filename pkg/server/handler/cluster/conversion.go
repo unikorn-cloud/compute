@@ -75,18 +75,47 @@ func newGenerator(client client.Client, options *Options, region regionapi.Clien
 	}
 }
 
+func (g *generator) getImage(ctx context.Context, regionID, imageID string) (*regionapi.Image, error) {
+	resp, err := g.region.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, g.organizationID, regionID)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return nil, errors.OAuth2ServerError("failed to list images")
+	}
+
+	images := *resp.JSON200
+
+	for i := range images {
+		if images[i].Metadata.Id == imageID {
+			return &images[i], nil
+		}
+	}
+
+	return nil, errors.OAuth2ServerError("failed to lookup image id")
+}
+
 // convertMachine converts from a custom resource into the API definition.
-func convertMachine(in *unikornv1.ComputeWorkloadPoolSpec) *openapi.MachinePool {
+func (g *generator) convertMachine(ctx context.Context, in *unikornv1.ComputeWorkloadPoolSpec, cluster *unikornv1.ComputeCluster) (*openapi.MachinePool, error) {
+	image, err := g.getImage(ctx, cluster.Spec.RegionID, *in.ImageID)
+	if err != nil {
+		return nil, err
+	}
+
 	machine := &openapi.MachinePool{
 		Replicas:           *in.Replicas,
 		FlavorId:           *in.FlavorID,
 		PublicIPAllocation: convertPublicIPAllocation(in.PublicIPAllocation),
 		Firewall:           convertFirewall(in.Firewall),
-		// TODO: Image
-		// CRD image selector is missing in the API definition
+		Image: openapi.ImageSelector{
+			Distro:  image.Spec.Os.Distro,
+			Variant: image.Spec.Os.Variant,
+			Version: ptr.To(image.Spec.Os.Version),
+		},
 	}
 
-	return machine
+	return machine, nil
 }
 
 // convertFirewall converts from a custom resource into the API definition.
@@ -168,54 +197,74 @@ func convertPublicIPAllocation(in *unikornv1.PublicIPAllocationSpec) *openapi.Pu
 }
 
 // convertWorkloadPool converts from a custom resource into the API definition.
-func convertWorkloadPool(in *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) openapi.ComputeClusterWorkloadPool {
-	workloadPool := openapi.ComputeClusterWorkloadPool{
-		Name:    in.Name,
-		Machine: *convertMachine(&in.ComputeWorkloadPoolSpec),
+func (g *generator) convertWorkloadPool(ctx context.Context, in *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, cluster *unikornv1.ComputeCluster) (*openapi.ComputeClusterWorkloadPool, error) {
+	machine, err := g.convertMachine(ctx, &in.ComputeWorkloadPoolSpec, cluster)
+	if err != nil {
+		return nil, err
 	}
 
-	return workloadPool
+	workloadPool := &openapi.ComputeClusterWorkloadPool{
+		Name:    in.Name,
+		Machine: *machine,
+	}
+
+	return workloadPool, nil
 }
 
 // convertWorkloadPools converts from a custom resource into the API definition.
-func convertWorkloadPools(in *unikornv1.ComputeCluster) []openapi.ComputeClusterWorkloadPool {
+func (g *generator) convertWorkloadPools(ctx context.Context, in *unikornv1.ComputeCluster) ([]openapi.ComputeClusterWorkloadPool, error) {
 	workloadPools := make([]openapi.ComputeClusterWorkloadPool, len(in.Spec.WorkloadPools.Pools))
 
 	for i := range in.Spec.WorkloadPools.Pools {
-		workloadPools[i] = convertWorkloadPool(&in.Spec.WorkloadPools.Pools[i])
+		pool, err := g.convertWorkloadPool(ctx, &in.Spec.WorkloadPools.Pools[i], in)
+		if err != nil {
+			return nil, err
+		}
+
+		workloadPools[i] = *pool
 	}
 
-	return workloadPools
+	return workloadPools, nil
 }
 
 // convert converts from a custom resource into the API definition.
-func convert(in *unikornv1.ComputeCluster) *openapi.ComputeClusterRead {
+func (g *generator) convert(ctx context.Context, in *unikornv1.ComputeCluster) (*openapi.ComputeClusterRead, error) {
 	provisioningStatus := coreopenapi.ResourceProvisioningStatusUnknown
 
 	if condition, err := in.StatusConditionRead(unikornv1core.ConditionAvailable); err == nil {
 		provisioningStatus = conversion.ConvertStatusCondition(condition)
 	}
 
+	pools, err := g.convertWorkloadPools(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
 	out := &openapi.ComputeClusterRead{
 		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags, provisioningStatus),
 		Spec: openapi.ComputeClusterSpec{
 			RegionId:      in.Spec.RegionID,
-			WorkloadPools: convertWorkloadPools(in),
+			WorkloadPools: pools,
 		},
 	}
 
-	return out
+	return out, nil
 }
 
 // uconvertList converts from a custom resource list into the API definition.
-func convertList(in *unikornv1.ComputeClusterList) openapi.ComputeClusters {
+func (g *generator) convertList(ctx context.Context, in *unikornv1.ComputeClusterList) (openapi.ComputeClusters, error) {
 	out := make(openapi.ComputeClusters, len(in.Items))
 
 	for i := range in.Items {
-		out[i] = *convert(&in.Items[i])
+		cluster, err := g.convert(ctx, &in.Items[i])
+		if err != nil {
+			return nil, err
+		}
+
+		out[i] = *cluster
 	}
 
-	return out
+	return out, nil
 }
 
 // chooseImages returns an image for the requested machine and flavor.
