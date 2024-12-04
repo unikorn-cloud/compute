@@ -227,15 +227,6 @@ components:
           $ref: '#/components/schemas/publicIPAllocation'
         image:
           $ref: '#/components/schemas/imageSelector'
-        ssh:
-          description: SSH settings.
-          type: object
-          properties:
-            publicKeys:
-              description: A list of public SSH keys to allow access to the machine.
-              type: array
-              items:
-                type: string
         userData:
           description: UserData contains base64-encoded configuration information or scripts to use upon launch.
           type: string
@@ -470,10 +461,6 @@ components:
                 image:
                   os: ubuntu
                   version: 20.04
-                ssh:
-                  publicKeys:
-                  - ssh-rsa AAA3NzC1yc2AAADAQABAABgQDZ6...
-                  - ssh-rsa AAA3NzaC1yc2AADAQAAAABgQDZ7...
   responses:
     computeClusterResponse:
       description: A Compute cluster.
@@ -521,10 +508,6 @@ components:
                   family: debian
                   distro: ubuntu
                   version: '20.04'
-                ssh:
-                  publicKeys:
-                  - ssh-rsa AAA3NzC1yc2AAADAQABAABgQDZ6...
-                  - ssh-rsa AAA3NzaC1yc2AADAQAAAABgQDZ7...
             status:
               workloadPools:
               - name: default
@@ -579,10 +562,6 @@ components:
                   family: debian
                   dsitro: ubuntu
                   version: 20.04
-                ssh:
-                  publicKeys:
-                  - ssh-rsa AAA3NzC1yc2AAADAQABAABgQDZ6...
-                  - ssh-rsa AAA3NzaC1yc2AADAQAAAABgQDZ7...
             status:
               workloadPools:
               - name: default
