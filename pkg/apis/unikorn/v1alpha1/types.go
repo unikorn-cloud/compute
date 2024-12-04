@@ -32,6 +32,8 @@ type ComputeWorkloadPoolSpec struct {
 	PublicIPAllocation *PublicIPAllocationSpec `json:"publicIpAllocation,omitempty"`
 	// Firewall is the workload pool firewall configuration.
 	Firewall *FirewallSpec `json:"firewall,omitempty"`
+	// UserData contains configuration information or scripts to use upon launch.
+	UserData []byte `json:"userData,omitempty"`
 }
 
 type PublicIPAllocationSpec struct {

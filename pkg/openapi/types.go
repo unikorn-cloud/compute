@@ -187,11 +187,8 @@ type MachinePool struct {
 	// Replicas Number of machines for a statically sized pool or the maximum for an auto-scaled pool.
 	Replicas int `json:"replicas"`
 
-	// Ssh SSH settings.
-	Ssh *struct {
-		// PublicKeys A list of public SSH keys to allow access to the machine.
-		PublicKeys *[]string `json:"publicKeys,omitempty"`
-	} `json:"ssh,omitempty"`
+	// UserData UserData contains base64-encoded configuration information or scripts to use upon launch.
+	UserData *[]byte `json:"userData,omitempty"`
 }
 
 // PublicIPAllocation A public IP allocation settings.

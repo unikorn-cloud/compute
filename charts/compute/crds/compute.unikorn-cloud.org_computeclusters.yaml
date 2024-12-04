@@ -200,6 +200,11 @@ spec:
                           description: Replicas is the initial pool size to deploy.
                           minimum: 0
                           type: integer
+                        userData:
+                          description: UserData contains configuration information
+                            or scripts to use upon launch.
+                          format: byte
+                          type: string
                       required:
                       - flavorId
                       - imageId
