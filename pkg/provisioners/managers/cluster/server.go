@@ -19,31 +19,41 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 
+	"github.com/spjmurray/go-util/pkg/set"
+
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
 	computeprovisioners "github.com/unikorn-cloud/compute/pkg/provisioners"
+	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreconstants "github.com/unikorn-cloud/core/pkg/constants"
 	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 )
 
 func (p *Provisioner) reconcileServers(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, servers computeprovisioners.WorkloadPoolProvisionedServerSet, securitygroups computeprovisioners.WorkloadPoolProvisionedSecurityGroupSet, options *computeprovisioners.ClusterOpenstackOptions) error {
 	provisionedServers := servers[pool.Name]
 
-	toDelete, toCreate := p.serverReconciliationList(provisionedServers, pool)
+	create, update, remove := p.serverReconciliationList(provisionedServers, pool)
 
-	for _, name := range toDelete {
+	for name := range remove.All() {
 		if err := p.deleteServer(ctx, client, provisionedServers[name].Metadata.Id); err != nil {
 			return err
 		}
 	}
 
-	for _, name := range toCreate {
+	for name := range update.All() {
+		// TODO: reconcile changes e.g. security groups.
+		p.updateServerStatus(pool, provisionedServers[name])
+	}
+
+	for name := range create.All() {
 		if err := p.createServer(ctx, client, name, *options.ProviderNetwork.NetworkID, pool, securitygroups[pool.Name]); err != nil {
 			return err
 		}
@@ -58,11 +68,46 @@ func (p *Provisioner) deleteServer(ctx context.Context, client regionapi.ClientW
 		return err
 	}
 
-	if resp.StatusCode() != http.StatusAccepted && resp.StatusCode() != http.StatusNotFound {
+	// Gone already, ignore me!
+	if resp.StatusCode() == http.StatusNotFound {
+		return nil
+	}
+
+	if resp.StatusCode() != http.StatusAccepted {
 		return fmt.Errorf("%w: server DELETE expected 202 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
 	}
 
+	// TODO: add to the status in a deprovisioning state.
 	return nil
+}
+
+func convertStatusCondition(in coreapi.ResourceProvisioningStatus) unikornv1core.ConditionReason {
+	//nolint:exhaustive
+	switch in {
+	case coreapi.ResourceProvisioningStatusDeprovisioning:
+		return unikornv1core.ConditionReasonDeprovisioning
+	case coreapi.ResourceProvisioningStatusProvisioned:
+		return unikornv1core.ConditionReasonProvisioned
+	case coreapi.ResourceProvisioningStatusProvisioning:
+		return unikornv1core.ConditionReasonProvisioning
+	}
+
+	return unikornv1core.ConditionReasonErrored
+}
+
+func (p *Provisioner) updateServerStatus(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, server regionapi.ServerRead) {
+	poolStatus := p.cluster.GetWorkloadPoolStatus(pool.Name)
+	poolStatus.Replicas++
+
+	status := unikornv1.MachineStatus{
+		Hostname:  server.Metadata.Name,
+		PrivateIP: server.Status.PrivateIP,
+		PublicIP:  server.Status.PublicIP,
+	}
+
+	unikornv1core.UpdateCondition(&status.Conditions, unikornv1core.ConditionAvailable, corev1.ConditionFalse, convertStatusCondition(server.Metadata.ProvisioningStatus), "server provisioning")
+
+	poolStatus.Machines = append(poolStatus.Machines, status)
 }
 
 func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientWithResponsesInterface, name, networkID string, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securitygroup *regionapi.SecurityGroupRead) error {
@@ -109,8 +154,7 @@ func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientW
 		},
 	}
 
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDServersWithResponse(
-		ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], request)
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDServersWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], request)
 	if err != nil {
 		return err
 	}
@@ -119,39 +163,31 @@ func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientW
 		return fmt.Errorf("%w: server POST expected 201 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
 	}
 
+	machine := *resp.JSON201
+
+	p.updateServerStatus(pool, machine)
+
 	return nil
 }
 
-func (p *Provisioner) serverName(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, replicaIndex int) string {
+func serverName(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, replicaIndex int) string {
 	// naive implementation to create a server name based on the pool name and replica index
 	return fmt.Sprintf("%s-%d", pool.Name, replicaIndex)
 }
 
-// serverReconciliationList compares the provisioned servers with the desired servers and returns the name of the servers to delete and to create.
-func (p *Provisioner) serverReconciliationList(provisioned computeprovisioners.ProvisionedServerSet, desired *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) ([]string, []string) {
-	toDelete, toCreate := []string{}, []string{}
-	desiredSet := make(map[string]struct{})
+// serverReconciliationList compares the provisioned servers with the desired servers and returns the name of the servers to create, reconcile and delete.
+func (p *Provisioner) serverReconciliationList(provisioned computeprovisioners.ProvisionedServerSet, desired *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) (set.Set[string], set.Set[string], set.Set[string]) {
+	// Things that actually exist...
+	actualNames := set.New[string](slices.Collect(maps.Keys(provisioned))...)
 
-	// build a set of desired server names based on the replica count
+	// Things that should exist...
+	desiredNames := set.New[string]()
+
 	for i := range *desired.Replicas {
-		desiredSet[p.serverName(desired, i)] = struct{}{}
+		desiredNames.Add(serverName(desired, i))
 	}
 
-	// find servers to delete
-	for name := range provisioned {
-		if _, exists := desiredSet[name]; !exists {
-			toDelete = append(toDelete, name)
-		}
-	}
-
-	// find servers to create
-	for name := range desiredSet {
-		if _, exists := provisioned[name]; !exists {
-			toCreate = append(toCreate, name)
-		}
-	}
-
-	return toDelete, toCreate
+	return desiredNames.Difference(actualNames), actualNames.Intersection(desiredNames), actualNames.Difference(desiredNames)
 }
 
 func (p *Provisioner) getServers(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*regionapi.ServersResponse, error) {

@@ -354,10 +354,14 @@ components:
       type: object
       required:
       - name
+      - replicas
       properties:
         name:
           description: Workload pool name.
           type: string
+        replicas:
+          description: Number of machines.
+          type: integer
         machines:
           $ref: '#/components/schemas/computeClusterMachinesStatus'
     computeClusterMachinesStatus:
@@ -370,7 +374,6 @@ components:
       type: object
       required:
       - hostname
-      - privateIP
       - status
       properties:
         hostname:
@@ -383,14 +386,7 @@ components:
           description: Machine public IP address.
           type: string
         status:
-          description: Machine status.
-          type: string
-          enum:
-          - unknown
-          - provisioning
-          - provisioned
-          - deprovisioning
-          - error
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/schemas/resourceProvisioningStatus'
     computeClusterRead:
       description: Compute cluster read.
       type: object
@@ -511,6 +507,7 @@ components:
             status:
               workloadPools:
               - name: default
+                replicas: 1
                 machines:
                 - hostname: machine-1
                   privateIP: 10.0.0.1
@@ -565,6 +562,7 @@ components:
             status:
               workloadPools:
               - name: default
+                replicas: 1
                 machines:
                 - hostname: machine-1
                   privateIP: 10.0.0.1

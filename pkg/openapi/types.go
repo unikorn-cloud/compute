@@ -12,15 +12,6 @@ const (
 	Oauth2AuthenticationScopes = "oauth2Authentication.Scopes"
 )
 
-// Defines values for ComputeClusterMachineStatusStatus.
-const (
-	Deprovisioning ComputeClusterMachineStatusStatus = "deprovisioning"
-	Error          ComputeClusterMachineStatusStatus = "error"
-	Provisioned    ComputeClusterMachineStatusStatus = "provisioned"
-	Provisioning   ComputeClusterMachineStatusStatus = "provisioning"
-	Unknown        ComputeClusterMachineStatusStatus = "unknown"
-)
-
 // Defines values for FirewallRuleProtocol.
 const (
 	Tcp FirewallRuleProtocol = "tcp"
@@ -33,17 +24,14 @@ type ComputeClusterMachineStatus struct {
 	Hostname string `json:"hostname"`
 
 	// PrivateIP Machine private IP address.
-	PrivateIP string `json:"privateIP"`
+	PrivateIP *string `json:"privateIP,omitempty"`
 
 	// PublicIP Machine public IP address.
 	PublicIP *string `json:"publicIP,omitempty"`
 
-	// Status Machine status.
-	Status ComputeClusterMachineStatusStatus `json:"status"`
+	// Status The provisioning state of a resource.
+	Status externalRef0.ResourceProvisioningStatus `json:"status"`
 }
-
-// ComputeClusterMachineStatusStatus Machine status.
-type ComputeClusterMachineStatusStatus string
 
 // ComputeClusterMachinesStatus A list of Compute cluster machines status.
 type ComputeClusterMachinesStatus = []ComputeClusterMachineStatus
@@ -90,6 +78,9 @@ type ComputeClusterWorkloadPoolStatus struct {
 
 	// Name Workload pool name.
 	Name string `json:"name"`
+
+	// Replicas Number of machines.
+	Replicas int `json:"replicas"`
 }
 
 // ComputeClusterWorkloadPools A list of Compute cluster workload pools.

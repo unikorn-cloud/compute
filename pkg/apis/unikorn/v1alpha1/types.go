@@ -137,6 +137,30 @@ type ComputeClusterWorkloadPoolsSpec struct {
 type ComputeClusterStatus struct {
 	// Namespace defines the namespace a cluster resides in.
 	Namespace string `json:"namespace,omitempty"`
+	// WorkloadPools is the status of all pools.
+	WorkloadPools []WorkloadPoolStatus `json:"workloadpools,omitempty"`
 	// Current service state of a Compute cluster.
+	Conditions []unikornv1core.Condition `json:"conditions,omitempty"`
+}
+
+type WorkloadPoolStatus struct {
+	// Name of the workload pool.
+	Name string `json:"name"`
+	// Replicas that actually exist.
+	Replicas int `json:"replicas,omitempty"`
+	// Machines in the pool.
+	Machines []MachineStatus `json:"machines,omitempty"`
+}
+
+type MachineStatus struct {
+	// Hostname of the machine.
+	Hostname string `json:"hostname"`
+	// PrivateIP is the private IP address.
+	// TODO: should be IPv4Address.
+	PrivateIP *string `json:"privateIp,omitempty"`
+	// PublicIP is the public IP address if requested.
+	// TODO: should be IPv4Address.
+	PublicIP *string `json:"publicIp,omitempty"`
+	// Conditions is a set of status conditions for the machine.
 	Conditions []unikornv1core.Condition `json:"conditions,omitempty"`
 }

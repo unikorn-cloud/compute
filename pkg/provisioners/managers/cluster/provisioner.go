@@ -254,6 +254,9 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 		return err
 	}
 
+	// Reset the status it'll get updated as we go along...
+	p.cluster.Status = unikornv1.ComputeClusterStatus{}
+
 	for _, pool := range p.cluster.Spec.WorkloadPools.Pools {
 		// reconcile security groups
 		if err := p.reconcileSecurityGroup(clientContext, client, &pool, securityGroups); err != nil {
@@ -266,12 +269,16 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 		}
 	}
 
+	// TODO: if any of the machine statuses are not provisioned, we should return
+	// the correct error status here or a yield to force reconcilliation until
+	// the desired state.
+	// TODO: we need to sort the status stuff so it doesn't move around all the
+	// time for determinism on both the CLI and UI.
 	return nil
 }
 
 // Deprovision implements the Provision interface.
 func (p *Provisioner) Deprovision(ctx context.Context) error {
-	// TODO: do something!
 	// Clean up the identity when everything has cleanly deprovisioned.
 	// An accepted status means the API has recoded the deletion event and
 	// we can delete the cluster, a not found means it's been deleted already
