@@ -195,6 +195,11 @@ func (in *ComputeWorkloadPoolSpec) DeepCopyInto(out *ComputeWorkloadPoolSpec) {
 		*out = new(FirewallSpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.UserData != nil {
+		in, out := &in.UserData, &out.UserData
+		*out = make([]byte, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

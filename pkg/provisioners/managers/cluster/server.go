@@ -80,6 +80,11 @@ func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientW
 		}
 	}
 
+	var userdata *[]byte
+	if pool.UserData != nil {
+		userdata = &pool.UserData
+	}
+
 	request := regionapi.ServerWrite{
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        name,
@@ -100,6 +105,7 @@ func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientW
 				Enabled: publicIPAllocationEnabled,
 			},
 			SecurityGroups: securitygroups,
+			UserData:       userdata,
 		},
 	}
 

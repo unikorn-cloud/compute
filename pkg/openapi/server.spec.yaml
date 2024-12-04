@@ -236,6 +236,10 @@ components:
               type: array
               items:
                 type: string
+        userData:
+          description: UserData contains base64-encoded configuration information or scripts to use upon launch.
+          type: string
+          format: byte
     firewall:
       description: A list of firewall rules applied to a workload pool.
       type: object

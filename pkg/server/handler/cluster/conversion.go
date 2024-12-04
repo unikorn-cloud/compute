@@ -113,9 +113,19 @@ func (g *generator) convertMachine(ctx context.Context, in *unikornv1.ComputeWor
 			Variant: image.Spec.Os.Variant,
 			Version: ptr.To(image.Spec.Os.Version),
 		},
+		UserData: convertUserData(in.UserData),
 	}
 
 	return machine, nil
+}
+
+// convertUserData converts from a custom resource into the API definition.
+func convertUserData(in []byte) *[]byte {
+	if in == nil {
+		return nil
+	}
+
+	return &in
 }
 
 // convertFirewall converts from a custom resource into the API definition.
@@ -378,6 +388,7 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 				MachineGeneric:     *machine,
 				PublicIPAllocation: g.generatePublicIPAllocation(pool),
 				Firewall:           firewall,
+				UserData:           g.generateUserData(pool.Machine.UserData),
 			},
 		}
 
@@ -396,6 +407,14 @@ func (g *generator) generatePublicIPAllocation(request *openapi.ComputeClusterWo
 	return &unikornv1.PublicIPAllocationSpec{
 		Enabled: request.Machine.PublicIPAllocation.Enabled,
 	}
+}
+
+func (g *generator) generateUserData(data *[]byte) []byte {
+	if data == nil {
+		return nil
+	}
+
+	return *data
 }
 
 func (g *generator) generateFirewall(request *openapi.ComputeClusterWorkloadPool) (*unikornv1.FirewallSpec, error) {
