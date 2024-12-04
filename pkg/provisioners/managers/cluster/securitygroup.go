@@ -22,6 +22,8 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/spjmurray/go-util/pkg/set"
+
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
 	computeprovisioners "github.com/unikorn-cloud/compute/pkg/provisioners"
 	coreconstants "github.com/unikorn-cloud/core/pkg/constants"
@@ -76,9 +78,9 @@ func (p *Provisioner) reconcileSecurityGroupRules(ctx context.Context, client re
 		return err
 	}
 
-	toDelete, toCreate := p.compareFirewallRuleLists(provisionedRules, pool.Firewall.Ingress)
+	toCreate, toDelete := p.compareFirewallRuleLists(provisionedRules, pool.Firewall.Ingress)
 
-	for _, id := range toDelete {
+	for id := range toDelete.All() {
 		index := slices.IndexFunc(provisionedRules, func(rule regionapi.SecurityGroupRuleRead) bool {
 			return rule.Metadata.Name == id
 		})
@@ -88,7 +90,7 @@ func (p *Provisioner) reconcileSecurityGroupRules(ctx context.Context, client re
 		}
 	}
 
-	for _, id := range toCreate {
+	for id := range toCreate.All() {
 		index := slices.IndexFunc(pool.Firewall.Ingress, func(rule unikornv1.FirewallRule) bool {
 			return rule.ID == id
 		})
@@ -192,35 +194,20 @@ func (p *Provisioner) securityGroupName(pool *unikornv1.ComputeClusterWorkloadPo
 	return fmt.Sprintf("%s-%s", p.cluster.Name, pool.Name)
 }
 
-func (p *Provisioner) compareFirewallRuleLists(provisioned regionapi.SecurityGroupRulesRead, desired []unikornv1.FirewallRule) ([]string, []string) {
-	toDelete, toCreate := []string{}, []string{}
-	provisionedSet := make(map[string]struct{})
-	desiredSet := make(map[string]struct{})
+func (p *Provisioner) compareFirewallRuleLists(provisioned regionapi.SecurityGroupRulesRead, desired []unikornv1.FirewallRule) (set.Set[string], set.Set[string]) {
+	actualIDs := set.New[string]()
 
-	// populate sets
 	for _, rule := range provisioned {
-		provisionedSet[rule.Metadata.Name] = struct{}{}
+		actualIDs.Add(rule.Metadata.Name)
 	}
+
+	desiredIDs := set.New[string]()
 
 	for _, rule := range desired {
-		desiredSet[rule.ID] = struct{}{}
+		desiredIDs.Add(rule.ID)
 	}
 
-	// find rules to delete
-	for id := range provisionedSet {
-		if _, exists := desiredSet[id]; !exists {
-			toDelete = append(toDelete, id)
-		}
-	}
-
-	// find rules to create
-	for id := range desiredSet {
-		if _, exists := provisionedSet[id]; !exists {
-			toCreate = append(toCreate, id)
-		}
-	}
-
-	return toDelete, toCreate
+	return desiredIDs.Difference(actualIDs), actualIDs.Difference(desiredIDs)
 }
 
 func (p *Provisioner) getSecurityGroups(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*regionapi.SecurityGroupsResponse, error) {

@@ -78,6 +78,22 @@ func (c *ComputeCluster) ResourceLabels() (labels.Set, error) {
 	return labels, nil
 }
 
+func (c *ComputeCluster) GetWorkloadPoolStatus(name string) *WorkloadPoolStatus {
+	for i, status := range c.Status.WorkloadPools {
+		if name == status.Name {
+			return &c.Status.WorkloadPools[i]
+		}
+	}
+
+	status := WorkloadPoolStatus{
+		Name: name,
+	}
+
+	c.Status.WorkloadPools = append(c.Status.WorkloadPools, status)
+
+	return &c.Status.WorkloadPools[len(c.Status.WorkloadPools)-1]
+}
+
 func (p *FirewallRulePort) String() string {
 	if p.Number != nil {
 		return fmt.Sprintf("%d", *p.Number)

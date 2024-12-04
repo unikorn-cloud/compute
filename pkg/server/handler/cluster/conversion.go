@@ -28,7 +28,7 @@ import (
 	"github.com/unikorn-cloud/compute/pkg/openapi"
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
-	coreopenapi "github.com/unikorn-cloud/core/pkg/openapi"
+	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/core/pkg/util"
@@ -237,9 +237,84 @@ func (g *generator) convertWorkloadPools(ctx context.Context, in *unikornv1.Comp
 	return workloadPools, nil
 }
 
+func convertCondition(in unikornv1core.ConditionReason) coreapi.ResourceProvisioningStatus {
+	//nolint:exhaustive
+	switch in {
+	case unikornv1core.ConditionReasonDeprovisioning:
+		return coreapi.ResourceProvisioningStatusDeprovisioning
+	case unikornv1core.ConditionReasonErrored:
+		return coreapi.ResourceProvisioningStatusError
+	case unikornv1core.ConditionReasonProvisioned:
+		return coreapi.ResourceProvisioningStatusProvisioned
+	case unikornv1core.ConditionReasonProvisioning:
+		return coreapi.ResourceProvisioningStatusProvisioning
+	}
+
+	return coreapi.ResourceProvisioningStatusUnknown
+}
+
+func convertMachineStatus(in *unikornv1.MachineStatus) *openapi.ComputeClusterMachineStatus {
+	status := coreapi.ResourceProvisioningStatusUnknown
+
+	if condition, err := unikornv1core.GetCondition(in.Conditions, unikornv1core.ConditionAvailable); err == nil {
+		status = convertCondition(condition.Reason)
+	}
+
+	out := &openapi.ComputeClusterMachineStatus{
+		Hostname:  in.Hostname,
+		PrivateIP: in.PrivateIP,
+		PublicIP:  in.PublicIP,
+		Status:    status,
+	}
+
+	return out
+}
+
+func convertMachinesStatus(in []unikornv1.MachineStatus) *openapi.ComputeClusterMachinesStatus {
+	out := make(openapi.ComputeClusterMachinesStatus, len(in))
+
+	for i := range in {
+		out[i] = *convertMachineStatus(&in[i])
+	}
+
+	return &out
+}
+
+func convertWorkloadPoolStatus(in *unikornv1.WorkloadPoolStatus) *openapi.ComputeClusterWorkloadPoolStatus {
+	out := &openapi.ComputeClusterWorkloadPoolStatus{
+		Name:     in.Name,
+		Replicas: in.Replicas,
+		Machines: convertMachinesStatus(in.Machines),
+	}
+
+	return out
+}
+
+func convertWorkloadPoolsStatus(in []unikornv1.WorkloadPoolStatus) *openapi.ComputeClusterWorkloadPoolsStatus {
+	out := make(openapi.ComputeClusterWorkloadPoolsStatus, len(in))
+
+	for i := range in {
+		out[i] = *convertWorkloadPoolStatus(&in[i])
+	}
+
+	return &out
+}
+
+func convertClusterStatus(in *unikornv1.ComputeClusterStatus) *openapi.ComputeClusterStatus {
+	if in == nil {
+		return nil
+	}
+
+	out := &openapi.ComputeClusterStatus{
+		WorkloadPools: convertWorkloadPoolsStatus(in.WorkloadPools),
+	}
+
+	return out
+}
+
 // convert converts from a custom resource into the API definition.
 func (g *generator) convert(ctx context.Context, in *unikornv1.ComputeCluster) (*openapi.ComputeClusterRead, error) {
-	provisioningStatus := coreopenapi.ResourceProvisioningStatusUnknown
+	provisioningStatus := coreapi.ResourceProvisioningStatusUnknown
 
 	if condition, err := in.StatusConditionRead(unikornv1core.ConditionAvailable); err == nil {
 		provisioningStatus = conversion.ConvertStatusCondition(condition)
@@ -256,6 +331,7 @@ func (g *generator) convert(ctx context.Context, in *unikornv1.ComputeCluster) (
 			RegionId:      in.Spec.RegionID,
 			WorkloadPools: pools,
 		},
+		Status: convertClusterStatus(&in.Status),
 	}
 
 	return out, nil
