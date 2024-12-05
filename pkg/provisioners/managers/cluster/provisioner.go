@@ -21,6 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/spf13/pflag"
 
@@ -83,6 +85,9 @@ type Provisioner struct {
 
 	// options are documented for the type.
 	options *Options
+
+	// resourceProvisioning tells whether any sub resource is in a provisioning state.
+	resourceProvisioning bool
 }
 
 // New returns a new initialized provisioner object.
@@ -269,11 +274,23 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 		}
 	}
 
-	// TODO: if any of the machine statuses are not provisioned, we should return
-	// the correct error status here or a yield to force reconcilliation until
-	// the desired state.
-	// TODO: we need to sort the status stuff so it doesn't move around all the
-	// time for determinism on both the CLI and UI.
+	// Sort the statuses so they have a deterministic order up the stack, especially
+	// to things like the UI.
+	slices.SortFunc(p.cluster.Status.WorkloadPools, func(a, b unikornv1.WorkloadPoolStatus) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+
+	for _, pool := range p.cluster.Status.WorkloadPools {
+		slices.SortFunc(pool.Machines, func(a, b unikornv1.MachineStatus) int {
+			return strings.Compare(a.Hostname, b.Hostname)
+		})
+	}
+
+	// Now once the UX is sorted, roll up any non-healthy statuses to the top level.
+	if p.resourceProvisioning {
+		return provisioners.ErrYield
+	}
+
 	return nil
 }
 

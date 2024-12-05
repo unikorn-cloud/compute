@@ -81,16 +81,22 @@ func (p *Provisioner) deleteServer(ctx context.Context, client regionapi.ClientW
 	return nil
 }
 
-func convertStatusCondition(in coreapi.ResourceProvisioningStatus) unikornv1core.ConditionReason {
+func (p *Provisioner) convertStatusCondition(in coreapi.ResourceProvisioningStatus) unikornv1core.ConditionReason {
 	//nolint:exhaustive
 	switch in {
+	case coreapi.ResourceProvisioningStatusProvisioning:
+		p.resourceProvisioning = true
+
+		return unikornv1core.ConditionReasonProvisioning
 	case coreapi.ResourceProvisioningStatusDeprovisioning:
+		p.resourceProvisioning = true
+
 		return unikornv1core.ConditionReasonDeprovisioning
 	case coreapi.ResourceProvisioningStatusProvisioned:
 		return unikornv1core.ConditionReasonProvisioned
-	case coreapi.ResourceProvisioningStatusProvisioning:
-		return unikornv1core.ConditionReasonProvisioning
 	}
+
+	p.resourceProvisioning = true
 
 	return unikornv1core.ConditionReasonErrored
 }
@@ -105,7 +111,7 @@ func (p *Provisioner) updateServerStatus(pool *unikornv1.ComputeClusterWorkloadP
 		PublicIP:  server.Status.PublicIP,
 	}
 
-	unikornv1core.UpdateCondition(&status.Conditions, unikornv1core.ConditionAvailable, corev1.ConditionFalse, convertStatusCondition(server.Metadata.ProvisioningStatus), "server provisioning")
+	unikornv1core.UpdateCondition(&status.Conditions, unikornv1core.ConditionAvailable, corev1.ConditionFalse, p.convertStatusCondition(server.Metadata.ProvisioningStatus), "server provisioning")
 
 	poolStatus.Machines = append(poolStatus.Machines, status)
 }
