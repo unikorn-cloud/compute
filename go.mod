@@ -7,9 +7,10 @@ require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/spf13/pflag v1.0.5
+	github.com/spjmurray/go-util v0.1.3
 	github.com/unikorn-cloud/core v0.1.85
 	github.com/unikorn-cloud/identity v0.2.45
-	github.com/unikorn-cloud/region v0.1.47-rc2
+	github.com/unikorn-cloud/region v0.1.47-rc4
 	go.opentelemetry.io/otel/sdk v1.31.0
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
@@ -61,7 +62,6 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.60.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/spjmurray/go-util v0.1.3 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/otel v1.31.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.31.0 // indirect
