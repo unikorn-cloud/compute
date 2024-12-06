@@ -328,10 +328,10 @@ spec:
                           hostname:
                             description: Hostname of the machine.
                             type: string
-                          privateIP:
+                          privateIp:
                             description: PrivateIP is the private IP address.
                             type: string
-                          publicIP:
+                          publicIp:
                             description: PublicIP is the public IP address if requested.
                             type: string
                         required:
