@@ -193,31 +193,7 @@ func (c *Client) createNetworkOpenstack(ctx context.Context, organizationID, pro
 	return resp.JSON201, nil
 }
 
-func (c *Client) getRegion(ctx context.Context, organizationID, regionID string) (*regionapi.RegionRead, error) {
-	// TODO: Need a straight get interface rather than a list.
-	resp, err := c.region.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(ctx, organizationID)
-	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to get region").WithError(err)
-	}
-
-	if resp.StatusCode() != http.StatusOK {
-		return nil, errors.OAuth2ServerError("unable to get region")
-	}
-
-	results := *resp.JSON200
-
-	index := slices.IndexFunc(results, func(region regionapi.RegionRead) bool {
-		return region.Metadata.Id == regionID
-	})
-
-	if index < 0 {
-		return nil, errors.OAuth2ServerError("unable to get region")
-	}
-
-	return &results[index], nil
-}
-
-func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizationID, projectID, regionID string, identity *regionapi.IdentityRead, cluster *unikornv1.ComputeCluster) error {
+func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizationID, projectID string, identity *regionapi.IdentityRead, cluster *unikornv1.ComputeCluster) error {
 	// Save the identity ID for later cleanup.
 	if cluster.Annotations == nil {
 		cluster.Annotations = map[string]string{}
@@ -225,25 +201,13 @@ func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizati
 
 	cluster.Annotations[constants.IdentityAnnotation] = identity.Metadata.Id
 
-	// Apply any region specific configuration based on feature flags.
-	region, err := c.getRegion(ctx, organizationID, regionID)
+	// Provision a network for nodes to attach to.
+	network, err := c.createNetworkOpenstack(ctx, organizationID, projectID, cluster, identity)
 	if err != nil {
-		return err
+		return errors.OAuth2ServerError("failed to create physical network").WithError(err)
 	}
 
-	// Provision a vlan physical network for bare-metal nodes to attach to.
-	// For now, do this for everything, given you may start with a VM only cluster
-	// and suddely want some compute nodes.  CAPO won't allow you to change
-	// networks, so play it safe.  Please note that the cluster controller will
-	// automatically discover the physical network, so we don't need an annotation.
-	if region.Spec.Features.PhysicalNetworks {
-		network, err := c.createNetworkOpenstack(ctx, organizationID, projectID, cluster, identity)
-		if err != nil {
-			return errors.OAuth2ServerError("failed to create physical network").WithError(err)
-		}
-
-		cluster.Annotations[constants.PhysicalNetworkAnnotation] = network.Metadata.Id
-	}
+	cluster.Annotations[constants.PhysicalNetworkAnnotation] = network.Metadata.Id
 
 	return nil
 }
@@ -265,7 +229,7 @@ func (c *Client) Create(ctx context.Context, organizationID, projectID string, r
 		return nil, err
 	}
 
-	if err := c.applyCloudSpecificConfiguration(ctx, organizationID, projectID, request.Spec.RegionId, identity, cluster); err != nil {
+	if err := c.applyCloudSpecificConfiguration(ctx, organizationID, projectID, identity, cluster); err != nil {
 		return nil, err
 	}
 
