@@ -31,7 +31,7 @@ type ComputeWorkloadPoolSpec struct {
 	// PublicIPAllocation is the workload pool public IP allocation configuration.
 	PublicIPAllocation *PublicIPAllocationSpec `json:"publicIpAllocation,omitempty"`
 	// Firewall is the workload pool firewall configuration.
-	Firewall *FirewallSpec `json:"firewall,omitempty"`
+	Firewall []FirewallRule `json:"firewall,omitempty"`
 	// UserData contains configuration information or scripts to use upon launch.
 	UserData []byte `json:"userData,omitempty"`
 }
@@ -41,21 +41,13 @@ type PublicIPAllocationSpec struct {
 	Enabled bool `json:"enabled,omitempty"`
 }
 
-type FirewallSpec struct {
-	// Ingress is a list of firewall rules applied to a workload pool.
-	Ingress []FirewallRule `json:"ingress,omitempty"`
-}
+// +kubebuilder:validation:Enum=ingress;egress
+type FirewallRuleDirection string
 
-type FirewallRule struct {
-	// ID is the firewall rule identifier.
-	ID string `json:"id,omitempty"`
-	// Protocol The protocol to allow.
-	Protocol FirewallRuleProtocol `json:"protocol"`
-	// CIDR is the CIDR block to allow traffic from.
-	CIDR unikornv1core.IPv4Prefix `json:"cidr"`
-	// Port is the port or range of ports.
-	Port FirewallRulePort `json:"port"`
-}
+const (
+	Ingress FirewallRuleDirection = "ingress"
+	Egress  FirewallRuleDirection = "egress"
+)
 
 // +kubebuilder:validation:Enum=tcp;udp
 type FirewallRuleProtocol string
@@ -65,21 +57,17 @@ const (
 	UDP FirewallRuleProtocol = "udp"
 )
 
-// +kubebuilder:validation:XValidation:message="at least one of number or range must be defined",rule=(has(self.number) || has(self.range))
-type FirewallRulePort struct {
-	// Number is the port number.
-	Number *int `json:"number,omitempty"`
-	// Range is the port range.
-	Range *FirewallRulePortRange `json:"range,omitempty"`
-}
-
-type FirewallRulePortRange struct {
-	// Start is the start of the range.
-	// +kubebuilder:validation:Minimum=1
-	Start int `json:"start"`
-	// End is the end of the range.
-	// +kubebuilder:validation:Maximum=65535
-	End int `json:"end"`
+type FirewallRule struct {
+	// Direction of traffic flow.
+	Direction FirewallRuleDirection `json:"direction"`
+	// Protocol The protocol to allow.
+	Protocol FirewallRuleProtocol `json:"protocol"`
+	// Prefixes is the CIDR block to allow traffic from.
+	Prefixes []unikornv1core.IPv4Prefix `json:"cidr"`
+	// Port is the port or start of a range of ports.
+	Port int `json:"port"`
+	// PortMax is the end of a range of ports.
+	PortMax *int `json:"portMax,omitempty"`
 }
 
 // ComputeClusterList is a typed list of compute clusters.

@@ -31,7 +31,6 @@ import (
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
-	"github.com/unikorn-cloud/core/pkg/util"
 	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
@@ -107,7 +106,7 @@ func (g *generator) convertMachine(ctx context.Context, in *unikornv1.ComputeWor
 		Replicas:           *in.Replicas,
 		FlavorId:           *in.FlavorID,
 		PublicIPAllocation: convertPublicIPAllocation(in.PublicIPAllocation),
-		Firewall:           convertFirewall(in.Firewall),
+		Firewall:           convertFirewallRules(in.Firewall),
 		Image: openapi.ImageSelector{
 			Distro:  image.Spec.Os.Distro,
 			Variant: image.Spec.Os.Variant,
@@ -128,71 +127,62 @@ func convertUserData(in []byte) *[]byte {
 	return &in
 }
 
-// convertFirewall converts from a custom resource into the API definition.
-func convertFirewall(in *unikornv1.FirewallSpec) *openapi.Firewall {
-	if in == nil || len(in.Ingress) == 0 {
-		return nil
+func convertDirection(in unikornv1.FirewallRuleDirection) openapi.FirewallRuleDirection {
+	switch in {
+	case unikornv1.Ingress:
+		return openapi.Ingress
+	case unikornv1.Egress:
+		return openapi.Egress
 	}
 
-	// Map to hold the grouped results with a composite key
-	grouped := make(map[string]*openapi.FirewallRule)
-
-	for _, ingress := range in.Ingress {
-		key := fmt.Sprintf("%s-%s", ingress.Protocol, ingress.Port.String())
-
-		if _, exists := grouped[key]; !exists {
-			grouped[key] = &openapi.FirewallRule{
-				Protocol: convertProtocol(ingress.Protocol),
-				Port:     convertPort(ingress.Port),
-				Cidr:     []string{ingress.CIDR.String()},
-			}
-		} else {
-			grouped[key].Cidr = append(grouped[key].Cidr, ingress.CIDR.String())
-		}
-	}
-
-	ingress := []openapi.FirewallRule{}
-	for _, rule := range grouped {
-		ingress = append(ingress, *rule)
-	}
-
-	return &openapi.Firewall{
-		Ingress: &ingress,
-	}
+	return ""
 }
 
 // convertProtocol converts from a custom resource into the API definition.
 func convertProtocol(in unikornv1.FirewallRuleProtocol) openapi.FirewallRuleProtocol {
-	var out openapi.FirewallRuleProtocol
-
 	switch in {
 	case unikornv1.TCP:
-		out = openapi.Tcp
+		return openapi.Tcp
 	case unikornv1.UDP:
-		out = openapi.Udp
+		return openapi.Udp
+	}
+
+	return ""
+}
+
+func convertPrefixes(in []unikornv1core.IPv4Prefix) []string {
+	out := make([]string, len(in))
+
+	for i, prefix := range in {
+		out[i] = prefix.IPNet.String()
 	}
 
 	return out
 }
 
-// convertPort converts from a custom resource into the API definition.
-func convertPort(in unikornv1.FirewallRulePort) openapi.FirewallRulePort {
-	return openapi.FirewallRulePort{
-		Number: in.Number,
-		Range:  convertPortRange(in.Range),
+func convertFirewallRule(in *unikornv1.FirewallRule) *openapi.FirewallRule {
+	return &openapi.FirewallRule{
+		Direction: convertDirection(in.Direction),
+		Protocol:  convertProtocol(in.Protocol),
+		Port:      in.Port,
+		PortMax:   in.PortMax,
+		Prefixes:  convertPrefixes(in.Prefixes),
 	}
 }
 
-// convertPortRange converts from a custom resource into the API definition.
-func convertPortRange(in *unikornv1.FirewallRulePortRange) *openapi.FirewallRulePortRange {
-	if in == nil {
+// convertFirewall converts from a custom resource into the API definition.
+func convertFirewallRules(in []unikornv1.FirewallRule) *openapi.FirewallRules {
+	if len(in) == 0 {
 		return nil
 	}
 
-	return &openapi.FirewallRulePortRange{
-		Start: in.Start,
-		End:   in.End,
+	out := make(openapi.FirewallRules, len(in))
+
+	for i := range in {
+		out[i] = *convertFirewallRule(&in[i])
 	}
+
+	return &out
 }
 
 // convertPublicIPAllocation converts from a custom resource into the API definition.
@@ -450,12 +440,9 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 			return nil, err
 		}
 
-		var firewall *unikornv1.FirewallSpec
-		if pool.Machine.Firewall != nil && pool.Machine.Firewall.Ingress != nil {
-			firewall, err = g.generateFirewall(pool)
-			if err != nil {
-				return nil, err
-			}
+		firewall, err := generateFirewallRules(pool.Machine.Firewall)
+		if err != nil {
+			return nil, err
 		}
 
 		workloadPool := unikornv1.ComputeClusterWorkloadPoolsPoolSpec{
@@ -493,105 +480,79 @@ func (g *generator) generateUserData(data *[]byte) []byte {
 	return *data
 }
 
-func (g *generator) generateFirewall(request *openapi.ComputeClusterWorkloadPool) (*unikornv1.FirewallSpec, error) {
-	firewall := &unikornv1.FirewallSpec{
-		Ingress: []unikornv1.FirewallRule{},
+func generateFirewallRuleDirection(in openapi.FirewallRuleDirection) unikornv1.FirewallRuleDirection {
+	switch in {
+	case openapi.Ingress:
+		return unikornv1.Ingress
+	case openapi.Egress:
+		return unikornv1.Egress
 	}
 
-	for _, ingress := range *request.Machine.Firewall.Ingress {
-		for _, cidr := range ingress.Cidr {
-			_, prefix, err := net.ParseCIDR(cidr)
-			if err != nil {
-				return nil, err
-			}
+	return ""
+}
 
-			rule := unikornv1.FirewallRule{
-				ID:       g.firewallRuleID(request.Name, ingress.Protocol, &ingress.Port, cidr),
-				Protocol: g.generateFirewallRuleProtocol(ingress.Protocol),
-				Port:     g.generateFirewallPort(&ingress.Port),
-				CIDR: unikornv1core.IPv4Prefix{
-					IPNet: *prefix,
-				},
-			}
+func generateFirewallRuleProtocol(in openapi.FirewallRuleProtocol) unikornv1.FirewallRuleProtocol {
+	switch in {
+	case openapi.Tcp:
+		return unikornv1.TCP
+	case openapi.Udp:
+		return unikornv1.UDP
+	}
 
-			firewall.Ingress = append(firewall.Ingress, rule)
+	return ""
+}
+
+func generatePrefixes(in []string) ([]unikornv1core.IPv4Prefix, error) {
+	out := make([]unikornv1core.IPv4Prefix, len(in))
+
+	for i := range in {
+		_, cidr, err := net.ParseCIDR(in[i])
+		if err != nil {
+			return nil, err
+		}
+
+		out[i] = unikornv1core.IPv4Prefix{
+			IPNet: *cidr,
 		}
 	}
 
-	return firewall, nil
+	return out, nil
 }
 
-func (g *generator) firewallRuleID(poolName string, protocol openapi.FirewallRuleProtocol, port *openapi.FirewallRulePort, cidr string) string {
-	pool := g.lookupCurrentPool(poolName)
-
-	if pool == nil || pool.Firewall == nil {
-		return util.GenerateResourceID()
+func generateFirewallRule(in *openapi.FirewallRule) (*unikornv1.FirewallRule, error) {
+	prefixes, err := generatePrefixes(in.Prefixes)
+	if err != nil {
+		return nil, err
 	}
 
-	index := slices.IndexFunc(pool.Firewall.Ingress, func(rule unikornv1.FirewallRule) bool {
-		return rule.CIDR.String() == cidr && rule.Port.String() == g.generateFirewallRulePortKey(port) && rule.Protocol == unikornv1.FirewallRuleProtocol(protocol)
-	})
-
-	if index >= 0 {
-		return pool.Firewall.Ingress[index].ID
+	out := &unikornv1.FirewallRule{
+		Direction: generateFirewallRuleDirection(in.Direction),
+		Protocol:  generateFirewallRuleProtocol(in.Protocol),
+		Port:      in.Port,
+		PortMax:   in.PortMax,
+		Prefixes:  prefixes,
 	}
 
-	return util.GenerateResourceID()
+	return out, nil
 }
 
-func (g *generator) generateFirewallRulePortKey(port *openapi.FirewallRulePort) string {
-	if port.Number != nil {
-		return fmt.Sprintf("%d", *port.Number)
+func generateFirewallRules(in *openapi.FirewallRules) ([]unikornv1.FirewallRule, error) {
+	if in == nil || len(*in) == 0 {
+		return nil, nil
 	}
 
-	return fmt.Sprintf("%d-%d", port.Range.Start, port.Range.End)
-}
+	out := make([]unikornv1.FirewallRule, len(*in))
 
-func (g *generator) lookupCurrentPool(poolName string) *unikornv1.ComputeClusterWorkloadPoolsPoolSpec {
-	if g.current == nil {
-		return nil
+	for i := range *in {
+		rule, err := generateFirewallRule(&(*in)[i])
+		if err != nil {
+			return nil, err
+		}
+
+		out[i] = *rule
 	}
 
-	index := slices.IndexFunc(g.current.Spec.WorkloadPools.Pools, func(wp unikornv1.ComputeClusterWorkloadPoolsPoolSpec) bool {
-		return wp.Name == poolName
-	})
-
-	if index < 0 {
-		return nil
-	}
-
-	return &g.current.Spec.WorkloadPools.Pools[index]
-}
-
-func (g *generator) generateFirewallRuleProtocol(in openapi.FirewallRuleProtocol) unikornv1.FirewallRuleProtocol {
-	var out unikornv1.FirewallRuleProtocol
-
-	switch in {
-	case openapi.Tcp:
-		out = unikornv1.TCP
-	case openapi.Udp:
-		out = unikornv1.UDP
-	}
-
-	return out
-}
-
-func (g *generator) generateFirewallPort(request *openapi.FirewallRulePort) unikornv1.FirewallRulePort {
-	return unikornv1.FirewallRulePort{
-		Number: request.Number,
-		Range:  g.generateFirewallPortRange(request.Range),
-	}
-}
-
-func (g *generator) generateFirewallPortRange(portrange *openapi.FirewallRulePortRange) *unikornv1.FirewallRulePortRange {
-	if portrange == nil {
-		return nil
-	}
-
-	return &unikornv1.FirewallRulePortRange{
-		Start: portrange.Start,
-		End:   portrange.End,
-	}
+	return out, nil
 }
 
 // lookupFlavor resolves the flavor from its name.

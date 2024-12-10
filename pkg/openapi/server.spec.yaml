@@ -222,7 +222,7 @@ components:
         disk:
           $ref: '#/components/schemas/volume'
         firewall:
-          $ref: '#/components/schemas/firewall'
+          $ref: '#/components/schemas/firewallRules'
         publicIPAllocation:
           $ref: '#/components/schemas/publicIPAllocation'
         image:
@@ -231,12 +231,6 @@ components:
           description: UserData contains base64-encoded configuration information or scripts to use upon launch.
           type: string
           format: byte
-    firewall:
-      description: A list of firewall rules applied to a workload pool.
-      type: object
-      properties:
-        ingress:
-          $ref: '#/components/schemas/firewallRules'
     firewallRules:
       description: A list of firewall rules applied to a workload pool.
       type: array
@@ -246,10 +240,17 @@ components:
       description: A firewall rule applied to a workload pool.
       type: object
       required:
+      - direction
       - protocol
       - port
-      - cidr
+      - prefixes
       properties:
+        direction:
+          description: The direction of network traffic to apply the rule to.
+          type: string
+          enum:
+          - ingress
+          - egress
         protocol:
           description: The protocol to allow.
           type: string
@@ -257,34 +258,16 @@ components:
           - tcp
           - udp
         port:
-          $ref: '#/components/schemas/firewallRulePort'
-        cidr:
-          description: A list of CIDR blocks to allow, it might be any IPv4 or IPv6 in CIDR notation.
+          description: The port to allow, or start of a port range.
+          type: integer
+        portMax:
+          description: The end of a port range, inclusive of this this port, if specified.
+          type: integer
+        prefixes:
+          description: A list of CIDR prefixes to allow, it might be any IPv4 or IPv6 in CIDR notation.
           type: array
           items:
             type: string
-    firewallRulePort:
-      description: The port definition to allow traffic.
-      type: object
-      properties:
-        number:
-          description: The port to allow.
-          type: integer
-        range:
-          $ref: '#/components/schemas/firewallRulePortRange'
-    firewallRulePortRange:
-      description: The port range to allow traffic.
-      type: object
-      required:
-      - start
-      - end
-      properties:
-        start:
-          description: The start of the port range.
-          type: integer
-        end:
-          description: The end of the port range.
-          type: integer
     publicIPAllocation:
       description: A public IP allocation settings.
       type: object
@@ -438,18 +421,16 @@ components:
                     version: '24.04'
                   replicas: 3
                 firewall:
-                  ingress:
-                  - protocol: tcp
-                    port: 
-                      number: 80
-                    cidr: 
+                  - direction: ingress
+                    protocol: tcp
+                    port: 80
+                    prefixes: 
                     - 192.168.1.0/24
-                  - protocol: tcp
-                    port:
-                      range:
-                        start: 1066
-                        end: 1999
-                    cidr: 
+                  - direction: ingress
+                    protocol: tcp
+                    port: 1066
+                    portMax: 1999
+                    prefixes: 
                     - 10.0.0.0/8
                     - 172.16.0.0/12
                 publicIPAllocation:
@@ -483,18 +464,16 @@ components:
                     version: '24.04'
                   replicas: 3
                 firewall:
-                  ingress:
-                  - protocol: tcp
-                    port: 
-                      number: 80
-                    cidr: 
+                  - direction: ingress
+                    protocol: tcp
+                    port: 80
+                    prefixes: 
                     - 192.168.1.0/24
-                  - protocol: tcp
-                    port:
-                      range:
-                        start: 1066
-                        end: 1999
-                    cidr: 
+                  - direction: ingress
+                    protocol: tcp
+                    port: 1066
+                    portMax: 1999
+                    prefixes: 
                     - 10.0.0.0/8
                     - 172.16.0.0/12
                 publicIPAllocation:
@@ -538,18 +517,16 @@ components:
                     version: '24.04'
                   replicas: 3
                 firewall:
-                  ingress:
-                  - protocol: tcp
-                    port: 
-                      number: 80
-                    cidr: 
+                  - direction: ingress
+                    protocol: tcp
+                    port: 80
+                    prefixes: 
                     - 192.168.1.0/24
-                  - protocol: tcp
-                    port:
-                      range:
-                        start: 1066
-                        end: 1999
-                    cidr: 
+                  - direction: ingress
+                    protocol: tcp
+                    port: 1066
+                    portMax: 1999
+                    prefixes: 
                     - 10.0.0.0/8
                     - 172.16.0.0/12
                 publicIPAllocation:
