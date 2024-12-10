@@ -19,6 +19,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 
@@ -26,6 +27,7 @@ import (
 
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
 	computeprovisioners "github.com/unikorn-cloud/compute/pkg/provisioners"
+	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreconstants "github.com/unikorn-cloud/core/pkg/constants"
 	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
@@ -67,6 +69,80 @@ func (p *Provisioner) reconcileSecurityGroup(ctx context.Context, client regiona
 	return nil
 }
 
+// TODO: share types.
+func securityGroupIDWrite(in *regionapi.SecurityGroupRuleWrite) string {
+	id := fmt.Sprintf("%s-%s", in.Spec.Direction, in.Spec.Protocol)
+
+	if in.Spec.Port.Number != nil {
+		id += fmt.Sprintf("-%d", *in.Spec.Port.Number)
+	} else {
+		id += fmt.Sprintf("-%d-%d", in.Spec.Port.Range.Start, in.Spec.Port.Range.End)
+	}
+
+	id += fmt.Sprintf("-%s", in.Spec.Cidr)
+
+	return id
+}
+
+// TODO: share types.
+func securityGroupIDRead(in *regionapi.SecurityGroupRuleRead) string {
+	id := fmt.Sprintf("%s-%s", in.Spec.Direction, in.Spec.Protocol)
+
+	if in.Spec.Port.Number != nil {
+		id += fmt.Sprintf("-%d", *in.Spec.Port.Number)
+	} else {
+		id += fmt.Sprintf("-%d-%d", in.Spec.Port.Range.Start, in.Spec.Port.Range.End)
+	}
+
+	id += fmt.Sprintf("-%s", in.Spec.Cidr)
+
+	return id
+}
+
+func (p *Provisioner) generateRequiredSecurityGroupRule(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, in *unikornv1.FirewallRule, prefix unikornv1core.IPv4Prefix) *regionapi.SecurityGroupRuleWrite {
+	rule := &regionapi.SecurityGroupRuleWrite{
+		Metadata: coreapi.ResourceWriteMetadata{
+			Name: "unikorn-compute-cluster-security-group",
+			Tags: p.tags(pool),
+		},
+		Spec: regionapi.SecurityGroupRuleWriteSpec{
+			Direction: regionapi.SecurityGroupRuleWriteSpecDirection(in.Direction),
+			Protocol:  regionapi.SecurityGroupRuleWriteSpecProtocol(in.Protocol),
+			Cidr:      prefix.IPNet.String(),
+		},
+	}
+
+	// TODO: Smell code.  I think the region controller should be responsible
+	// for managing CIDR handling.
+	if in.PortMax != nil {
+		rule.Spec.Port.Range = &regionapi.SecurityGroupRulePortRange{
+			Start: in.Port,
+			End:   *in.PortMax,
+		}
+	} else {
+		rule.Spec.Port.Number = &in.Port
+	}
+
+	return rule
+}
+
+// generateRequiredSecurityGroupRules creates all the security group rules we require based on
+// the input specification.  It essentially translates from our simple user facing API to that
+// employed by the region controller.
+func (p *Provisioner) generateRequiredSecurityGroupRules(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) map[string]*regionapi.SecurityGroupRuleWrite {
+	out := map[string]*regionapi.SecurityGroupRuleWrite{}
+
+	for i := range pool.Firewall {
+		for _, prefix := range pool.Firewall[i].Prefixes {
+			rule := p.generateRequiredSecurityGroupRule(pool, &pool.Firewall[i], prefix)
+
+			out[securityGroupIDWrite(rule)] = rule
+		}
+	}
+
+	return out
+}
+
 func (p *Provisioner) reconcileSecurityGroupRules(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securitygroup *regionapi.SecurityGroupRead) error {
 	if securitygroup == nil {
 		// wait until security group is created
@@ -78,24 +154,18 @@ func (p *Provisioner) reconcileSecurityGroupRules(ctx context.Context, client re
 		return err
 	}
 
-	toCreate, toDelete := p.compareFirewallRuleLists(provisionedRules, pool.Firewall.Ingress)
+	requiredRules := p.generateRequiredSecurityGroupRules(pool)
 
-	for id := range toDelete.All() {
-		index := slices.IndexFunc(provisionedRules, func(rule regionapi.SecurityGroupRuleRead) bool {
-			return rule.Metadata.Name == id
-		})
+	create, remove := p.compareFirewallRuleLists(provisionedRules, requiredRules)
 
-		if err := p.deleteSecurityGroupRule(ctx, client, securitygroup.Metadata.Id, (provisionedRules)[index].Metadata.Id); err != nil {
+	for id := range remove.All() {
+		if err := p.deleteSecurityGroupRule(ctx, client, securitygroup.Metadata.Id, provisionedRules[id].Metadata.Id); err != nil {
 			return err
 		}
 	}
 
-	for id := range toCreate.All() {
-		index := slices.IndexFunc(pool.Firewall.Ingress, func(rule unikornv1.FirewallRule) bool {
-			return rule.ID == id
-		})
-
-		if err := p.createSecurityGroupRule(ctx, client, pool, securitygroup.Metadata.Id, &pool.Firewall.Ingress[index]); err != nil {
+	for id := range create.All() {
+		if err := p.createSecurityGroupRule(ctx, client, securitygroup.Metadata.Id, requiredRules[id]); err != nil {
 			return err
 		}
 	}
@@ -137,35 +207,8 @@ func (p *Provisioner) deleteSecurityGroup(ctx context.Context, client regionapi.
 	return nil
 }
 
-func (p *Provisioner) createSecurityGroupRule(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securityGroupID string, rule *unikornv1.FirewallRule) error {
-	port := &regionapi.SecurityGroupRulePort{}
-
-	if rule.Port.Number != nil {
-		port.Number = rule.Port.Number
-	}
-
-	if rule.Port.Range != nil {
-		port.Range = &regionapi.SecurityGroupRulePortRange{
-			Start: rule.Port.Range.Start,
-			End:   rule.Port.Range.End,
-		}
-	}
-
-	request := regionapi.SecurityGroupRuleWrite{
-		Metadata: coreapi.ResourceWriteMetadata{
-			Name:        rule.ID,
-			Description: ptr.To("Security group rule for cluster " + p.cluster.Name),
-			Tags:        p.tags(pool),
-		},
-		Spec: regionapi.SecurityGroupRuleWriteSpec{
-			Direction: regionapi.SecurityGroupRuleWriteSpecDirectionIngress,
-			Cidr:      rule.CIDR.String(),
-			Protocol:  regionapi.SecurityGroupRuleWriteSpecProtocol(rule.Protocol),
-			Port:      *port,
-		},
-	}
-
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDSecuritygroupsSecurityGroupIDRulesWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], securityGroupID, request)
+func (p *Provisioner) createSecurityGroupRule(ctx context.Context, client regionapi.ClientWithResponsesInterface, securityGroupID string, request *regionapi.SecurityGroupRuleWrite) error {
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDSecuritygroupsSecurityGroupIDRulesWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], securityGroupID, *request)
 	if err != nil {
 		return err
 	}
@@ -194,18 +237,10 @@ func (p *Provisioner) securityGroupName(pool *unikornv1.ComputeClusterWorkloadPo
 	return fmt.Sprintf("%s-%s", p.cluster.Name, pool.Name)
 }
 
-func (p *Provisioner) compareFirewallRuleLists(provisioned regionapi.SecurityGroupRulesRead, desired []unikornv1.FirewallRule) (set.Set[string], set.Set[string]) {
-	actualIDs := set.New[string]()
+func (p *Provisioner) compareFirewallRuleLists(provisioned map[string]*regionapi.SecurityGroupRuleRead, desired map[string]*regionapi.SecurityGroupRuleWrite) (set.Set[string], set.Set[string]) {
+	actualIDs := set.New[string](slices.Collect(maps.Keys(provisioned))...)
 
-	for _, rule := range provisioned {
-		actualIDs.Add(rule.Metadata.Name)
-	}
-
-	desiredIDs := set.New[string]()
-
-	for _, rule := range desired {
-		desiredIDs.Add(rule.ID)
-	}
+	desiredIDs := set.New[string](slices.Collect(maps.Keys(desired))...)
 
 	return desiredIDs.Difference(actualIDs), actualIDs.Difference(desiredIDs)
 }
@@ -254,7 +289,7 @@ func (p *Provisioner) getProvisionedSecurityGroupSet(ctx context.Context, client
 	return result, nil
 }
 
-func (p *Provisioner) getSecurityGroupRules(ctx context.Context, client regionapi.ClientWithResponsesInterface, securityGroupID string) (regionapi.SecurityGroupRulesResponse, error) {
+func (p *Provisioner) getSecurityGroupRules(ctx context.Context, client regionapi.ClientWithResponsesInterface, securityGroupID string) (map[string]*regionapi.SecurityGroupRuleRead, error) {
 	response, err := client.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDSecuritygroupsSecurityGroupIDRulesWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], securityGroupID)
 	if err != nil {
 		return nil, err
@@ -264,5 +299,13 @@ func (p *Provisioner) getSecurityGroupRules(ctx context.Context, client regionap
 		return nil, fmt.Errorf("%w: securitygrouprule GET expected 200 got %d", coreerrors.ErrAPIStatus, response.StatusCode())
 	}
 
-	return *response.JSON200, nil
+	out := map[string]*regionapi.SecurityGroupRuleRead{}
+
+	rules := *response.JSON200
+
+	for i := range rules {
+		out[securityGroupIDRead(&rules[i])] = &rules[i]
+	}
+
+	return out, nil
 }

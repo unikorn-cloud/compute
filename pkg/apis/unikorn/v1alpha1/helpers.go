@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"errors"
-	"fmt"
 
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/core/pkg/constants"
@@ -92,12 +91,4 @@ func (c *ComputeCluster) GetWorkloadPoolStatus(name string) *WorkloadPoolStatus 
 	c.Status.WorkloadPools = append(c.Status.WorkloadPools, status)
 
 	return &c.Status.WorkloadPools[len(c.Status.WorkloadPools)-1]
-}
-
-func (p *FirewallRulePort) String() string {
-	if p.Number != nil {
-		return fmt.Sprintf("%d", *p.Number)
-	}
-
-	return fmt.Sprintf("%d-%d", p.Range.Start, p.Range.End)
 }

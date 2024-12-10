@@ -122,60 +122,41 @@ spec:
                           x-kubernetes-int-or-string: true
                         firewall:
                           description: Firewall is the workload pool firewall configuration.
-                          properties:
-                            ingress:
-                              description: Ingress is a list of firewall rules applied
-                                to a workload pool.
-                              items:
-                                properties:
-                                  cidr:
-                                    description: CIDR is the CIDR block to allow traffic
-                                      from.
-                                    pattern: ^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\/(?:3[0-2]|[1-2]?[0-9])$
-                                    type: string
-                                  id:
-                                    description: ID is the firewall rule identifier.
-                                    type: string
-                                  port:
-                                    description: Port is the port or range of ports.
-                                    properties:
-                                      number:
-                                        description: Number is the port number.
-                                        type: integer
-                                      range:
-                                        description: Range is the port range.
-                                        properties:
-                                          end:
-                                            description: End is the end of the range.
-                                            maximum: 65535
-                                            type: integer
-                                          start:
-                                            description: Start is the start of the
-                                              range.
-                                            minimum: 1
-                                            type: integer
-                                        required:
-                                        - end
-                                        - start
-                                        type: object
-                                    type: object
-                                    x-kubernetes-validations:
-                                    - message: at least one of number or range must
-                                        be defined
-                                      rule: (has(self.number) || has(self.range))
-                                  protocol:
-                                    description: Protocol The protocol to allow.
-                                    enum:
-                                    - tcp
-                                    - udp
-                                    type: string
-                                required:
-                                - cidr
-                                - port
-                                - protocol
-                                type: object
-                              type: array
-                          type: object
+                          items:
+                            properties:
+                              cidr:
+                                description: Prefixes is the CIDR block to allow traffic
+                                  from.
+                                items:
+                                  pattern: ^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\/(?:3[0-2]|[1-2]?[0-9])$
+                                  type: string
+                                type: array
+                              direction:
+                                description: Direction of traffic flow.
+                                enum:
+                                - ingress
+                                - egress
+                                type: string
+                              port:
+                                description: Port is the port or start of a range
+                                  of ports.
+                                type: integer
+                              portMax:
+                                description: PortMax is the end of a range of ports.
+                                type: integer
+                              protocol:
+                                description: Protocol The protocol to allow.
+                                enum:
+                                - tcp
+                                - udp
+                                type: string
+                            required:
+                            - cidr
+                            - direction
+                            - port
+                            - protocol
+                            type: object
+                          type: array
                         flavorId:
                           description: Flavor is the regions service flavor to deploy
                             with.

@@ -12,6 +12,12 @@ const (
 	Oauth2AuthenticationScopes = "oauth2Authentication.Scopes"
 )
 
+// Defines values for FirewallRuleDirection.
+const (
+	Egress  FirewallRuleDirection = "egress"
+	Ingress FirewallRuleDirection = "ingress"
+)
+
 // Defines values for FirewallRuleProtocol.
 const (
 	Tcp FirewallRuleProtocol = "tcp"
@@ -101,44 +107,29 @@ type ComputeClusterWrite struct {
 // ComputeClusters A list of Compute clusters.
 type ComputeClusters = []ComputeClusterRead
 
-// Firewall A list of firewall rules applied to a workload pool.
-type Firewall struct {
-	// Ingress A list of firewall rules applied to a workload pool.
-	Ingress *FirewallRules `json:"ingress,omitempty"`
-}
-
 // FirewallRule A firewall rule applied to a workload pool.
 type FirewallRule struct {
-	// Cidr A list of CIDR blocks to allow, it might be any IPv4 or IPv6 in CIDR notation.
-	Cidr []string `json:"cidr"`
+	// Direction The direction of network traffic to apply the rule to.
+	Direction FirewallRuleDirection `json:"direction"`
 
-	// Port The port definition to allow traffic.
-	Port FirewallRulePort `json:"port"`
+	// Port The port to allow, or start of a port range.
+	Port int `json:"port"`
+
+	// PortMax The end of a port range, inclusive of this this port, if specified.
+	PortMax *int `json:"portMax,omitempty"`
+
+	// Prefixes A list of CIDR prefixes to allow, it might be any IPv4 or IPv6 in CIDR notation.
+	Prefixes []string `json:"prefixes"`
 
 	// Protocol The protocol to allow.
 	Protocol FirewallRuleProtocol `json:"protocol"`
 }
 
+// FirewallRuleDirection The direction of network traffic to apply the rule to.
+type FirewallRuleDirection string
+
 // FirewallRuleProtocol The protocol to allow.
 type FirewallRuleProtocol string
-
-// FirewallRulePort The port definition to allow traffic.
-type FirewallRulePort struct {
-	// Number The port to allow.
-	Number *int `json:"number,omitempty"`
-
-	// Range The port range to allow traffic.
-	Range *FirewallRulePortRange `json:"range,omitempty"`
-}
-
-// FirewallRulePortRange The port range to allow traffic.
-type FirewallRulePortRange struct {
-	// End The end of the port range.
-	End int `json:"end"`
-
-	// Start The start of the port range.
-	Start int `json:"start"`
-}
 
 // FirewallRules A list of firewall rules applied to a workload pool.
 type FirewallRules = []FirewallRule
@@ -164,7 +155,7 @@ type MachinePool struct {
 	Disk *Volume `json:"disk,omitempty"`
 
 	// Firewall A list of firewall rules applied to a workload pool.
-	Firewall *Firewall `json:"firewall,omitempty"`
+	Firewall *FirewallRules `json:"firewall,omitempty"`
 
 	// FlavorId Flavor ID.
 	FlavorId string `json:"flavorId"`
