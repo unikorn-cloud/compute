@@ -64,6 +64,9 @@ type ComputeClusterSpec struct {
 
 // ComputeClusterStatus Compute cluster status.
 type ComputeClusterStatus struct {
+	// SshPrivateKey SSH private key that allows access to the cluster.
+	SshPrivateKey *string `json:"sshPrivateKey,omitempty"`
+
 	// WorkloadPools A list of Compute cluster workload pools status.
 	WorkloadPools *ComputeClusterWorkloadPoolsStatus `json:"workloadPools,omitempty"`
 }
