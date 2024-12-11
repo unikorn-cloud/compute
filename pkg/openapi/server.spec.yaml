@@ -226,7 +226,7 @@ components:
         publicIPAllocation:
           $ref: '#/components/schemas/publicIPAllocation'
         image:
-          $ref: '#/components/schemas/imageSelector'
+          $ref: '#/components/schemas/image'
         userData:
           description: UserData contains base64-encoded configuration information or scripts to use upon launch.
           type: string
@@ -277,6 +277,18 @@ components:
         enabled:
           description: Enable public IP allocation.
           type: boolean
+    image:
+      description: The image to use for a server.
+      type: object
+      properties:
+        id:
+          description: The image ID.
+          type: string
+        selector:
+          $ref: '#/components/schemas/imageSelector'
+      oneOf:
+      - required: [id]
+      - required: [selector]
     imageSelector:
       description: A server image selector.
       type: object
@@ -417,8 +429,9 @@ components:
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
                   image:
-                    distro: ubuntu
-                    version: '24.04'
+                    selector:
+                      distro: ubuntu
+                      version: '24.04'
                   replicas: 3
                 firewall:
                   - direction: ingress
@@ -435,9 +448,6 @@ components:
                     - 172.16.0.0/12
                 publicIPAllocation:
                   enabled: true
-                image:
-                  os: ubuntu
-                  version: 20.04
   responses:
     computeClusterResponse:
       description: A Compute cluster.
@@ -460,8 +470,9 @@ components:
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
                   image:
-                    distro: ubuntu
-                    version: '24.04'
+                    selector:
+                      distro: ubuntu
+                      version: '24.04'
                   replicas: 3
                 firewall:
                   - direction: ingress
@@ -478,11 +489,6 @@ components:
                     - 172.16.0.0/12
                 publicIPAllocation:
                   enabled: true
-                image:
-                  kernel: linux
-                  family: debian
-                  distro: ubuntu
-                  version: '20.04'
             status:
               workloadPools:
               - name: default
@@ -513,8 +519,9 @@ components:
                 machine:
                   flavorId: c7568e2d-f9ab-453d-9a3a-51375f78426b
                   image:
-                    distro: ubuntu
-                    version: '24.04'
+                    selector:
+                      distro: ubuntu
+                      version: '24.04'
                   replicas: 3
                 firewall:
                   - direction: ingress
@@ -531,11 +538,6 @@ components:
                     - 172.16.0.0/12
                 publicIPAllocation:
                   enabled: true
-                image:
-                  kernel: linux
-                  family: debian
-                  dsitro: ubuntu
-                  version: 20.04
             status:
               workloadPools:
               - name: default
