@@ -4,6 +4,10 @@
 package openapi
 
 import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/oapi-codegen/runtime"
 	externalRef0 "github.com/unikorn-cloud/core/pkg/openapi"
 	externalRef1 "github.com/unikorn-cloud/region/pkg/openapi"
 )
@@ -137,6 +141,22 @@ type FirewallRuleProtocol string
 // FirewallRules A list of firewall rules applied to a workload pool.
 type FirewallRules = []FirewallRule
 
+// Image The image to use for a server.
+type Image struct {
+	// Id The image ID.
+	Id *string `json:"id,omitempty"`
+
+	// Selector A server image selector.
+	Selector *ImageSelector `json:"selector,omitempty"`
+	union    json.RawMessage
+}
+
+// Image0 defines model for .
+type Image0 = interface{}
+
+// Image1 defines model for .
+type Image1 = interface{}
+
 // ImageSelector A server image selector.
 type ImageSelector struct {
 	// Distro A distribution name.
@@ -163,8 +183,8 @@ type MachinePool struct {
 	// FlavorId Flavor ID.
 	FlavorId string `json:"flavorId"`
 
-	// Image A server image selector.
-	Image ImageSelector `json:"image"`
+	// Image The image to use for a server.
+	Image Image `json:"image"`
 
 	// PublicIPAllocation A public IP allocation settings.
 	PublicIPAllocation *PublicIPAllocation `json:"publicIPAllocation,omitempty"`
@@ -214,3 +234,113 @@ type PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersJSONRequestBod
 
 // PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody defines body for PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID for application/json ContentType.
 type PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody = ComputeClusterWrite
+
+// AsImage0 returns the union data inside the Image as a Image0
+func (t Image) AsImage0() (Image0, error) {
+	var body Image0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromImage0 overwrites any union data inside the Image as the provided Image0
+func (t *Image) FromImage0(v Image0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeImage0 performs a merge with any union data inside the Image, using the provided Image0
+func (t *Image) MergeImage0(v Image0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsImage1 returns the union data inside the Image as a Image1
+func (t Image) AsImage1() (Image1, error) {
+	var body Image1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromImage1 overwrites any union data inside the Image as the provided Image1
+func (t *Image) FromImage1(v Image1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeImage1 performs a merge with any union data inside the Image, using the provided Image1
+func (t *Image) MergeImage1(v Image1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t Image) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	object := make(map[string]json.RawMessage)
+	if t.union != nil {
+		err = json.Unmarshal(b, &object)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if t.Id != nil {
+		object["id"], err = json.Marshal(t.Id)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'id': %w", err)
+		}
+	}
+
+	if t.Selector != nil {
+		object["selector"], err = json.Marshal(t.Selector)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'selector': %w", err)
+		}
+	}
+	b, err = json.Marshal(object)
+	return b, err
+}
+
+func (t *Image) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	if err != nil {
+		return err
+	}
+	object := make(map[string]json.RawMessage)
+	err = json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &t.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+	}
+
+	if raw, found := object["selector"]; found {
+		err = json.Unmarshal(raw, &t.Selector)
+		if err != nil {
+			return fmt.Errorf("error reading 'selector': %w", err)
+		}
+	}
+
+	return err
+}
