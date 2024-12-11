@@ -296,6 +296,7 @@ func convertClusterStatus(in *unikornv1.ComputeClusterStatus) *openapi.ComputeCl
 	}
 
 	out := &openapi.ComputeClusterStatus{
+		SshPrivateKey: in.SSHPrivateKey,
 		WorkloadPools: convertWorkloadPoolsStatus(in.WorkloadPools),
 	}
 

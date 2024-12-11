@@ -251,6 +251,9 @@ spec:
               namespace:
                 description: Namespace defines the namespace a cluster resides in.
                 type: string
+              sshPrivateKey:
+                description: SSHPrivateKey is the key used to access the cluster.
+                type: string
               workloadpools:
                 description: WorkloadPools is the status of all pools.
                 items:
