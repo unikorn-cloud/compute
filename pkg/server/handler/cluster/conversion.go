@@ -74,27 +74,6 @@ func newGenerator(client client.Client, options *Options, region regionapi.Clien
 	}
 }
 
-func (g *generator) getImage(ctx context.Context, regionID, imageID string) (*regionapi.Image, error) {
-	resp, err := g.region.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, g.organizationID, regionID)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode() != http.StatusOK {
-		return nil, errors.OAuth2ServerError("failed to list images")
-	}
-
-	images := *resp.JSON200
-
-	for i := range images {
-		if images[i].Metadata.Id == imageID {
-			return &images[i], nil
-		}
-	}
-
-	return nil, errors.OAuth2ServerError("failed to lookup image id")
-}
-
 // convertMachine converts from a custom resource into the API definition.
 func (g *generator) convertMachine(in *unikornv1.ComputeWorkloadPoolSpec) *openapi.MachinePool {
 	return &openapi.MachinePool{
@@ -330,11 +309,6 @@ func (g *generator) convertList(in *unikornv1.ComputeClusterList) openapi.Comput
 
 // chooseImages returns an image for the requested machine and flavor.
 func (g *generator) chooseImage(ctx context.Context, request *openapi.ComputeClusterWrite, m *openapi.MachinePool, _ *regionapi.Flavor) (*regionapi.Image, error) {
-	// If the image ID is set, we use it to get the image.
-	if m.Image.Id != nil {
-		return g.getImage(ctx, request.Spec.RegionId, *m.Image.Id)
-	}
-
 	resp, err := g.region.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
 		return nil, err
@@ -348,30 +322,7 @@ func (g *generator) chooseImage(ctx context.Context, request *openapi.ComputeClu
 
 	// TODO: is the image compatible with the flavor virtualization type???
 	images = slices.DeleteFunc(images, func(image regionapi.Image) bool {
-		// Is it the right distro?
-		if image.Spec.Os.Distro != m.Image.Selector.Distro {
-			return true
-		}
-
-		// Is it the right variant?
-		if m.Image.Selector.Variant != nil {
-			if image.Spec.Os.Variant == nil {
-				return true
-			}
-
-			if *m.Image.Selector.Variant != *image.Spec.Os.Variant {
-				return true
-			}
-		}
-
-		// Is it the right version?
-		if m.Image.Selector.Version != nil {
-			if *m.Image.Selector.Version != image.Spec.Os.Version {
-				return true
-			}
-		}
-
-		return false
+		return g.filterImage(image, m)
 	})
 
 	if len(images) == 0 {
@@ -380,6 +331,38 @@ func (g *generator) chooseImage(ctx context.Context, request *openapi.ComputeClu
 
 	// Select the most recent, the region servie guarantees temporal ordering.
 	return &images[0], nil
+}
+
+func (g *generator) filterImage(image regionapi.Image, m *openapi.MachinePool) bool {
+	// If the image ID is set, we use it to get the image.
+	if m.Image.Id != nil {
+		return *m.Image.Id != image.Metadata.Id
+	}
+
+	// Is it the right distro?
+	if image.Spec.Os.Distro != m.Image.Selector.Distro {
+		return true
+	}
+
+	// Is it the right variant?
+	if m.Image.Selector.Variant != nil {
+		if image.Spec.Os.Variant == nil {
+			return true
+		}
+
+		if *m.Image.Selector.Variant != *image.Spec.Os.Variant {
+			return true
+		}
+	}
+
+	// Is it the right version?
+	if m.Image.Selector.Version != nil {
+		if *m.Image.Selector.Version != image.Spec.Os.Version {
+			return true
+		}
+	}
+
+	return false
 }
 
 // generateNetwork generates the network part of a cluster.
