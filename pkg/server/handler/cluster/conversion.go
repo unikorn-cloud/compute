@@ -330,6 +330,11 @@ func (g *generator) convertList(in *unikornv1.ComputeClusterList) openapi.Comput
 
 // chooseImages returns an image for the requested machine and flavor.
 func (g *generator) chooseImage(ctx context.Context, request *openapi.ComputeClusterWrite, m *openapi.MachinePool, _ *regionapi.Flavor) (*regionapi.Image, error) {
+	// If the image ID is set, we use it to get the image.
+	if m.Image.Id != nil {
+		return g.getImage(ctx, request.Spec.RegionId, *m.Image.Id)
+	}
+
 	resp, err := g.region.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
 		return nil, err
@@ -343,11 +348,6 @@ func (g *generator) chooseImage(ctx context.Context, request *openapi.ComputeClu
 
 	// TODO: is the image compatible with the flavor virtualization type???
 	images = slices.DeleteFunc(images, func(image regionapi.Image) bool {
-		// When an image ID is specified, we should use it.
-		if m.Image.Id != nil {
-			return image.Metadata.Id != *m.Image.Id
-		}
-
 		// Is it the right distro?
 		if image.Spec.Os.Distro != m.Image.Selector.Distro {
 			return true
