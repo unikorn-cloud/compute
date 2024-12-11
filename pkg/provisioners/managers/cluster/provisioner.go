@@ -224,6 +224,7 @@ func (p *Provisioner) identityOptions(ctx context.Context, client regionapi.Clie
 	options := &computeprovisioners.ClusterOpenstackOptions{
 		CloudConfig:   *identity.Spec.Openstack.CloudConfig,
 		Cloud:         *identity.Spec.Openstack.Cloud,
+		SSHPrivateKey: identity.Spec.Openstack.SshPrivateKey,
 		ServerGroupID: identity.Spec.Openstack.ServerGroupId,
 		ProviderNetwork: &computeprovisioners.ClusterOpenstackProviderOptions{
 			NetworkID: &network.Metadata.Id,
@@ -260,7 +261,9 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 	}
 
 	// Reset the status it'll get updated as we go along...
-	p.cluster.Status = unikornv1.ComputeClusterStatus{}
+	p.cluster.Status = unikornv1.ComputeClusterStatus{
+		SSHPrivateKey: options.SSHPrivateKey,
+	}
 
 	for _, pool := range p.cluster.Spec.WorkloadPools.Pools {
 		// reconcile security groups

@@ -36,6 +36,8 @@ type ClusterOpenstackOptions struct {
 	ProviderNetwork *ClusterOpenstackProviderOptions
 	// ServerGroupID is the server group used for HA control planes.
 	ServerGroupID *string
+	// SSHPrivateKey that has been provisioned for the cluster.
+	SSHPrivateKey *string
 }
 
 type ClusterOpenstackProviderOptions struct {

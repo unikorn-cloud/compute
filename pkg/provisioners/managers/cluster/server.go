@@ -145,7 +145,7 @@ func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientW
 		Spec: regionapi.ServerWriteSpec{
 			FlavorId: *pool.FlavorID,
 			Image: regionapi.ServerImage{
-				Id: pool.ImageID,
+				Id: *pool.ImageID,
 			},
 			Networks: regionapi.ServerNetworkList{
 				regionapi.ServerNetwork{

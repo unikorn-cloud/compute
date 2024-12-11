@@ -125,6 +125,8 @@ type ComputeClusterWorkloadPoolsSpec struct {
 type ComputeClusterStatus struct {
 	// Namespace defines the namespace a cluster resides in.
 	Namespace string `json:"namespace,omitempty"`
+	// SSHPrivateKey is the key used to access the cluster.
+	SSHPrivateKey *string `json:"sshPrivateKey,omitempty"`
 	// WorkloadPools is the status of all pools.
 	WorkloadPools []WorkloadPoolStatus `json:"workloadpools,omitempty"`
 	// Current service state of a Compute cluster.
