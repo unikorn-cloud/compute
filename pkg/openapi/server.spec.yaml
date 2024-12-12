@@ -226,7 +226,7 @@ components:
         publicIPAllocation:
           $ref: '#/components/schemas/publicIPAllocation'
         image:
-          $ref: '#/components/schemas/image'
+          $ref: '#/components/schemas/computeImage'
         userData:
           description: UserData contains base64-encoded configuration information or scripts to use upon launch.
           type: string
@@ -277,7 +277,7 @@ components:
         enabled:
           description: Enable public IP allocation.
           type: boolean
-    image:
+    computeImage:
       description: The image to use for a server.
       type: object
       properties:

@@ -114,6 +114,22 @@ type ComputeClusterWrite struct {
 // ComputeClusters A list of Compute clusters.
 type ComputeClusters = []ComputeClusterRead
 
+// ComputeImage The image to use for a server.
+type ComputeImage struct {
+	// Id The image ID.
+	Id *string `json:"id,omitempty"`
+
+	// Selector A server image selector.
+	Selector *ImageSelector `json:"selector,omitempty"`
+	union    json.RawMessage
+}
+
+// ComputeImage0 defines model for .
+type ComputeImage0 = interface{}
+
+// ComputeImage1 defines model for .
+type ComputeImage1 = interface{}
+
 // FirewallRule A firewall rule applied to a workload pool.
 type FirewallRule struct {
 	// Direction The direction of network traffic to apply the rule to.
@@ -140,22 +156,6 @@ type FirewallRuleProtocol string
 
 // FirewallRules A list of firewall rules applied to a workload pool.
 type FirewallRules = []FirewallRule
-
-// Image The image to use for a server.
-type Image struct {
-	// Id The image ID.
-	Id *string `json:"id,omitempty"`
-
-	// Selector A server image selector.
-	Selector *ImageSelector `json:"selector,omitempty"`
-	union    json.RawMessage
-}
-
-// Image0 defines model for .
-type Image0 = interface{}
-
-// Image1 defines model for .
-type Image1 = interface{}
 
 // ImageSelector A server image selector.
 type ImageSelector struct {
@@ -184,7 +184,7 @@ type MachinePool struct {
 	FlavorId string `json:"flavorId"`
 
 	// Image The image to use for a server.
-	Image Image `json:"image"`
+	Image ComputeImage `json:"image"`
 
 	// PublicIPAllocation A public IP allocation settings.
 	PublicIPAllocation *PublicIPAllocation `json:"publicIPAllocation,omitempty"`
@@ -235,22 +235,22 @@ type PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersJSONRequestBod
 // PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody defines body for PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID for application/json ContentType.
 type PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody = ComputeClusterWrite
 
-// AsImage0 returns the union data inside the Image as a Image0
-func (t Image) AsImage0() (Image0, error) {
-	var body Image0
+// AsComputeImage0 returns the union data inside the ComputeImage as a ComputeImage0
+func (t ComputeImage) AsComputeImage0() (ComputeImage0, error) {
+	var body ComputeImage0
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromImage0 overwrites any union data inside the Image as the provided Image0
-func (t *Image) FromImage0(v Image0) error {
+// FromComputeImage0 overwrites any union data inside the ComputeImage as the provided ComputeImage0
+func (t *ComputeImage) FromComputeImage0(v ComputeImage0) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeImage0 performs a merge with any union data inside the Image, using the provided Image0
-func (t *Image) MergeImage0(v Image0) error {
+// MergeComputeImage0 performs a merge with any union data inside the ComputeImage, using the provided ComputeImage0
+func (t *ComputeImage) MergeComputeImage0(v ComputeImage0) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -261,22 +261,22 @@ func (t *Image) MergeImage0(v Image0) error {
 	return err
 }
 
-// AsImage1 returns the union data inside the Image as a Image1
-func (t Image) AsImage1() (Image1, error) {
-	var body Image1
+// AsComputeImage1 returns the union data inside the ComputeImage as a ComputeImage1
+func (t ComputeImage) AsComputeImage1() (ComputeImage1, error) {
+	var body ComputeImage1
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromImage1 overwrites any union data inside the Image as the provided Image1
-func (t *Image) FromImage1(v Image1) error {
+// FromComputeImage1 overwrites any union data inside the ComputeImage as the provided ComputeImage1
+func (t *ComputeImage) FromComputeImage1(v ComputeImage1) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeImage1 performs a merge with any union data inside the Image, using the provided Image1
-func (t *Image) MergeImage1(v Image1) error {
+// MergeComputeImage1 performs a merge with any union data inside the ComputeImage, using the provided ComputeImage1
+func (t *ComputeImage) MergeComputeImage1(v ComputeImage1) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -287,7 +287,7 @@ func (t *Image) MergeImage1(v Image1) error {
 	return err
 }
 
-func (t Image) MarshalJSON() ([]byte, error) {
+func (t ComputeImage) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	if err != nil {
 		return nil, err
@@ -317,7 +317,7 @@ func (t Image) MarshalJSON() ([]byte, error) {
 	return b, err
 }
 
-func (t *Image) UnmarshalJSON(b []byte) error {
+func (t *ComputeImage) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	if err != nil {
 		return err

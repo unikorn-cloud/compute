@@ -87,14 +87,14 @@ func (g *generator) convertMachine(in *unikornv1.ComputeWorkloadPoolSpec) *opena
 }
 
 // convertImage converts from a custom resource into the API definition.
-func convertImage(in *unikornv1.ComputeWorkloadPoolSpec) openapi.Image {
+func convertImage(in *unikornv1.ComputeWorkloadPoolSpec) openapi.ComputeImage {
 	if in.ImageSelector == nil {
-		return openapi.Image{
+		return openapi.ComputeImage{
 			Id: in.ImageID,
 		}
 	}
 
-	return openapi.Image{
+	return openapi.ComputeImage{
 		Selector: &openapi.ImageSelector{
 			Distro:  regionapi.OsDistro(in.ImageSelector.Distro),
 			Variant: in.ImageSelector.Variant,
@@ -436,7 +436,7 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 }
 
 // generateImageSelector generates the image selector part of a workload pool.
-func (g *generator) generateImageSelector(in openapi.Image) *unikornv1.ComputeWorkloadPoolImageSelector {
+func (g *generator) generateImageSelector(in openapi.ComputeImage) *unikornv1.ComputeWorkloadPoolImageSelector {
 	if in.Id != nil {
 		return nil
 	}
