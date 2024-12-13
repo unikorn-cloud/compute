@@ -165,6 +165,23 @@ spec:
                           description: Image is the region service image to deploy
                             with.
                           type: string
+                        imageSelector:
+                          description: ImageSelector is the image selector to use
+                            for the pool.
+                          properties:
+                            distro:
+                              description: Distro A distribution name.
+                              type: string
+                            variant:
+                              description: Variant A free form variant e.g. desktop/server.
+                              type: string
+                            version:
+                              description: Version Version of the operating system
+                                e.g. "24.04".
+                              type: string
+                          required:
+                          - distro
+                          type: object
                         name:
                           description: Name is the name of the pool.
                           type: string

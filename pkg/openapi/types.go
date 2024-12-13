@@ -4,6 +4,10 @@
 package openapi
 
 import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/oapi-codegen/runtime"
 	externalRef0 "github.com/unikorn-cloud/core/pkg/openapi"
 	externalRef1 "github.com/unikorn-cloud/region/pkg/openapi"
 )
@@ -110,6 +114,22 @@ type ComputeClusterWrite struct {
 // ComputeClusters A list of Compute clusters.
 type ComputeClusters = []ComputeClusterRead
 
+// ComputeImage The image to use for a server.
+type ComputeImage struct {
+	// Id The image ID.
+	Id *string `json:"id,omitempty"`
+
+	// Selector A server image selector.
+	Selector *ImageSelector `json:"selector,omitempty"`
+	union    json.RawMessage
+}
+
+// ComputeImage0 defines model for .
+type ComputeImage0 = interface{}
+
+// ComputeImage1 defines model for .
+type ComputeImage1 = interface{}
+
 // FirewallRule A firewall rule applied to a workload pool.
 type FirewallRule struct {
 	// Direction The direction of network traffic to apply the rule to.
@@ -163,8 +183,8 @@ type MachinePool struct {
 	// FlavorId Flavor ID.
 	FlavorId string `json:"flavorId"`
 
-	// Image A server image selector.
-	Image ImageSelector `json:"image"`
+	// Image The image to use for a server.
+	Image ComputeImage `json:"image"`
 
 	// PublicIPAllocation A public IP allocation settings.
 	PublicIPAllocation *PublicIPAllocation `json:"publicIPAllocation,omitempty"`
@@ -214,3 +234,113 @@ type PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersJSONRequestBod
 
 // PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody defines body for PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID for application/json ContentType.
 type PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody = ComputeClusterWrite
+
+// AsComputeImage0 returns the union data inside the ComputeImage as a ComputeImage0
+func (t ComputeImage) AsComputeImage0() (ComputeImage0, error) {
+	var body ComputeImage0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromComputeImage0 overwrites any union data inside the ComputeImage as the provided ComputeImage0
+func (t *ComputeImage) FromComputeImage0(v ComputeImage0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeComputeImage0 performs a merge with any union data inside the ComputeImage, using the provided ComputeImage0
+func (t *ComputeImage) MergeComputeImage0(v ComputeImage0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsComputeImage1 returns the union data inside the ComputeImage as a ComputeImage1
+func (t ComputeImage) AsComputeImage1() (ComputeImage1, error) {
+	var body ComputeImage1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromComputeImage1 overwrites any union data inside the ComputeImage as the provided ComputeImage1
+func (t *ComputeImage) FromComputeImage1(v ComputeImage1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeComputeImage1 performs a merge with any union data inside the ComputeImage, using the provided ComputeImage1
+func (t *ComputeImage) MergeComputeImage1(v ComputeImage1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ComputeImage) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	object := make(map[string]json.RawMessage)
+	if t.union != nil {
+		err = json.Unmarshal(b, &object)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if t.Id != nil {
+		object["id"], err = json.Marshal(t.Id)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'id': %w", err)
+		}
+	}
+
+	if t.Selector != nil {
+		object["selector"], err = json.Marshal(t.Selector)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'selector': %w", err)
+		}
+	}
+	b, err = json.Marshal(object)
+	return b, err
+}
+
+func (t *ComputeImage) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	if err != nil {
+		return err
+	}
+	object := make(map[string]json.RawMessage)
+	err = json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &t.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+	}
+
+	if raw, found := object["selector"]; found {
+		err = json.Unmarshal(raw, &t.Selector)
+		if err != nil {
+			return fmt.Errorf("error reading 'selector': %w", err)
+		}
+	}
+
+	return err
+}
