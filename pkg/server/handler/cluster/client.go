@@ -106,7 +106,7 @@ func (c *Client) List(ctx context.Context, organizationID string) (openapi.Compu
 		return strings.Compare(a.Name, b.Name)
 	})
 
-	return newGenerator(c.client, c.options, c.region, "", organizationID, "", nil).convertList(ctx, result)
+	return newGenerator(c.client, c.options, c.region, "", organizationID, "", nil).convertList(result), nil
 }
 
 // get returns the cluster.
@@ -237,7 +237,7 @@ func (c *Client) Create(ctx context.Context, organizationID, projectID string, r
 		return nil, errors.OAuth2ServerError("failed to create cluster").WithError(err)
 	}
 
-	return newGenerator(c.client, c.options, c.region, "", organizationID, "", nil).convert(ctx, cluster)
+	return newGenerator(c.client, c.options, c.region, "", organizationID, "", nil).convert(cluster), nil
 }
 
 // Delete deletes the implicit cluster indentified by the JTW claims.

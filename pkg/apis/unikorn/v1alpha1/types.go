@@ -34,12 +34,30 @@ type ComputeWorkloadPoolSpec struct {
 	Firewall []FirewallRule `json:"firewall,omitempty"`
 	// UserData contains configuration information or scripts to use upon launch.
 	UserData []byte `json:"userData,omitempty"`
+	// ImageSelector is the image selector to use for the pool.
+	ImageSelector *ComputeWorkloadPoolImageSelector `json:"imageSelector,omitempty"`
 }
 
 type PublicIPAllocationSpec struct {
 	// Enabled is a flag to enable public IP allocation.
 	Enabled bool `json:"enabled,omitempty"`
 }
+
+type ComputeWorkloadPoolImageSelector struct {
+	// Distro A distribution name.
+	Distro OsDistro `json:"distro"`
+	// Variant A free form variant e.g. desktop/server.
+	Variant *string `json:"variant,omitempty"`
+	// Version of the operating system e.g. "24.04".
+	Version *string `json:"version,omitempty"`
+}
+
+type OsDistro string
+
+const (
+	Rocky  OsDistro = "rocky"
+	Ubuntu OsDistro = "ubuntu"
+)
 
 // +kubebuilder:validation:Enum=ingress;egress
 type FirewallRuleDirection string

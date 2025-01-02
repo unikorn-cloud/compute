@@ -74,48 +74,33 @@ func newGenerator(client client.Client, options *Options, region regionapi.Clien
 	}
 }
 
-func (g *generator) getImage(ctx context.Context, regionID, imageID string) (*regionapi.Image, error) {
-	resp, err := g.region.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, g.organizationID, regionID)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode() != http.StatusOK {
-		return nil, errors.OAuth2ServerError("failed to list images")
-	}
-
-	images := *resp.JSON200
-
-	for i := range images {
-		if images[i].Metadata.Id == imageID {
-			return &images[i], nil
-		}
-	}
-
-	return nil, errors.OAuth2ServerError("failed to lookup image id")
-}
-
 // convertMachine converts from a custom resource into the API definition.
-func (g *generator) convertMachine(ctx context.Context, in *unikornv1.ComputeWorkloadPoolSpec, cluster *unikornv1.ComputeCluster) (*openapi.MachinePool, error) {
-	image, err := g.getImage(ctx, cluster.Spec.RegionID, *in.ImageID)
-	if err != nil {
-		return nil, err
-	}
-
-	machine := &openapi.MachinePool{
+func (g *generator) convertMachine(in *unikornv1.ComputeWorkloadPoolSpec) *openapi.MachinePool {
+	return &openapi.MachinePool{
 		Replicas:           *in.Replicas,
 		FlavorId:           *in.FlavorID,
 		PublicIPAllocation: convertPublicIPAllocation(in.PublicIPAllocation),
 		Firewall:           convertFirewallRules(in.Firewall),
-		Image: openapi.ImageSelector{
-			Distro:  image.Spec.Os.Distro,
-			Variant: image.Spec.Os.Variant,
-			Version: ptr.To(image.Spec.Os.Version),
-		},
-		UserData: convertUserData(in.UserData),
+		Image:              convertImage(in),
+		UserData:           convertUserData(in.UserData),
+	}
+}
+
+// convertImage converts from a custom resource into the API definition.
+func convertImage(in *unikornv1.ComputeWorkloadPoolSpec) openapi.ComputeImage {
+	if in.ImageSelector == nil {
+		return openapi.ComputeImage{
+			Id: in.ImageID,
+		}
 	}
 
-	return machine, nil
+	return openapi.ComputeImage{
+		Selector: &openapi.ImageSelector{
+			Distro:  regionapi.OsDistro(in.ImageSelector.Distro),
+			Variant: in.ImageSelector.Variant,
+			Version: in.ImageSelector.Version,
+		},
+	}
 }
 
 // convertUserData converts from a custom resource into the API definition.
@@ -197,34 +182,22 @@ func convertPublicIPAllocation(in *unikornv1.PublicIPAllocationSpec) *openapi.Pu
 }
 
 // convertWorkloadPool converts from a custom resource into the API definition.
-func (g *generator) convertWorkloadPool(ctx context.Context, in *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, cluster *unikornv1.ComputeCluster) (*openapi.ComputeClusterWorkloadPool, error) {
-	machine, err := g.convertMachine(ctx, &in.ComputeWorkloadPoolSpec, cluster)
-	if err != nil {
-		return nil, err
-	}
-
-	workloadPool := &openapi.ComputeClusterWorkloadPool{
+func (g *generator) convertWorkloadPool(in *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *openapi.ComputeClusterWorkloadPool {
+	return &openapi.ComputeClusterWorkloadPool{
 		Name:    in.Name,
-		Machine: *machine,
+		Machine: *g.convertMachine(&in.ComputeWorkloadPoolSpec),
 	}
-
-	return workloadPool, nil
 }
 
 // convertWorkloadPools converts from a custom resource into the API definition.
-func (g *generator) convertWorkloadPools(ctx context.Context, in *unikornv1.ComputeCluster) ([]openapi.ComputeClusterWorkloadPool, error) {
+func (g *generator) convertWorkloadPools(in *unikornv1.ComputeCluster) []openapi.ComputeClusterWorkloadPool {
 	workloadPools := make([]openapi.ComputeClusterWorkloadPool, len(in.Spec.WorkloadPools.Pools))
 
 	for i := range in.Spec.WorkloadPools.Pools {
-		pool, err := g.convertWorkloadPool(ctx, &in.Spec.WorkloadPools.Pools[i], in)
-		if err != nil {
-			return nil, err
-		}
-
-		workloadPools[i] = *pool
+		workloadPools[i] = *g.convertWorkloadPool(&in.Spec.WorkloadPools.Pools[i])
 	}
 
-	return workloadPools, nil
+	return workloadPools
 }
 
 func convertCondition(in unikornv1core.ConditionReason) coreapi.ResourceProvisioningStatus {
@@ -304,44 +277,34 @@ func convertClusterStatus(in *unikornv1.ComputeClusterStatus) *openapi.ComputeCl
 }
 
 // convert converts from a custom resource into the API definition.
-func (g *generator) convert(ctx context.Context, in *unikornv1.ComputeCluster) (*openapi.ComputeClusterRead, error) {
+func (g *generator) convert(in *unikornv1.ComputeCluster) *openapi.ComputeClusterRead {
 	provisioningStatus := coreapi.ResourceProvisioningStatusUnknown
 
 	if condition, err := in.StatusConditionRead(unikornv1core.ConditionAvailable); err == nil {
 		provisioningStatus = conversion.ConvertStatusCondition(condition)
 	}
 
-	pools, err := g.convertWorkloadPools(ctx, in)
-	if err != nil {
-		return nil, err
-	}
-
 	out := &openapi.ComputeClusterRead{
 		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags, provisioningStatus),
 		Spec: openapi.ComputeClusterSpec{
 			RegionId:      in.Spec.RegionID,
-			WorkloadPools: pools,
+			WorkloadPools: g.convertWorkloadPools(in),
 		},
 		Status: convertClusterStatus(&in.Status),
 	}
 
-	return out, nil
+	return out
 }
 
 // uconvertList converts from a custom resource list into the API definition.
-func (g *generator) convertList(ctx context.Context, in *unikornv1.ComputeClusterList) (openapi.ComputeClusters, error) {
+func (g *generator) convertList(in *unikornv1.ComputeClusterList) openapi.ComputeClusters {
 	out := make(openapi.ComputeClusters, len(in.Items))
 
 	for i := range in.Items {
-		cluster, err := g.convert(ctx, &in.Items[i])
-		if err != nil {
-			return nil, err
-		}
-
-		out[i] = *cluster
+		out[i] = *g.convert(&in.Items[i])
 	}
 
-	return out, nil
+	return out
 }
 
 // chooseImages returns an image for the requested machine and flavor.
@@ -359,30 +322,7 @@ func (g *generator) chooseImage(ctx context.Context, request *openapi.ComputeClu
 
 	// TODO: is the image compatible with the flavor virtualization type???
 	images = slices.DeleteFunc(images, func(image regionapi.Image) bool {
-		// Is it the right distro?
-		if image.Spec.Os.Distro != m.Image.Distro {
-			return true
-		}
-
-		// Is it the right variant?
-		if m.Image.Variant != nil {
-			if image.Spec.Os.Variant == nil {
-				return true
-			}
-
-			if *m.Image.Variant != *image.Spec.Os.Variant {
-				return true
-			}
-		}
-
-		// Is it the right version?
-		if m.Image.Version != nil {
-			if *m.Image.Version != image.Spec.Os.Version {
-				return true
-			}
-		}
-
-		return false
+		return g.filterImage(image, m)
 	})
 
 	if len(images) == 0 {
@@ -391,6 +331,38 @@ func (g *generator) chooseImage(ctx context.Context, request *openapi.ComputeClu
 
 	// Select the most recent, the region servie guarantees temporal ordering.
 	return &images[0], nil
+}
+
+func (g *generator) filterImage(image regionapi.Image, m *openapi.MachinePool) bool {
+	// If the image ID is set, we use it to get the image.
+	if m.Image.Id != nil {
+		return *m.Image.Id != image.Metadata.Id
+	}
+
+	// Is it the right distro?
+	if image.Spec.Os.Distro != m.Image.Selector.Distro {
+		return true
+	}
+
+	// Is it the right variant?
+	if m.Image.Selector.Variant != nil {
+		if image.Spec.Os.Variant == nil {
+			return true
+		}
+
+		if *m.Image.Selector.Variant != *image.Spec.Os.Variant {
+			return true
+		}
+	}
+
+	// Is it the right version?
+	if m.Image.Selector.Version != nil {
+		if *m.Image.Selector.Version != image.Spec.Os.Version {
+			return true
+		}
+	}
+
+	return false
 }
 
 // generateNetwork generates the network part of a cluster.
@@ -453,6 +425,7 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 				PublicIPAllocation: g.generatePublicIPAllocation(pool),
 				Firewall:           firewall,
 				UserData:           g.generateUserData(pool.Machine.UserData),
+				ImageSelector:      g.generateImageSelector(pool.Machine.Image),
 			},
 		}
 
@@ -460,6 +433,19 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 	}
 
 	return workloadPools, nil
+}
+
+// generateImageSelector generates the image selector part of a workload pool.
+func (g *generator) generateImageSelector(in openapi.ComputeImage) *unikornv1.ComputeWorkloadPoolImageSelector {
+	if in.Id != nil {
+		return nil
+	}
+
+	return &unikornv1.ComputeWorkloadPoolImageSelector{
+		Distro:  unikornv1.OsDistro(in.Selector.Distro),
+		Variant: in.Selector.Variant,
+		Version: in.Selector.Version,
+	}
 }
 
 // generatePublicIPAllocation generates the public IP allocation part of a workload pool.
