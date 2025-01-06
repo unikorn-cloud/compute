@@ -1,5 +1,5 @@
 /*
-Copyright 2024 the Unikorn Authors.
+Copyright 2024-2025 the Unikorn Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -57,8 +57,13 @@ func (c *Client) ProjectNamespace(ctx context.Context, organization, project str
 		return nil, err
 	}
 
+	kindRequirement, err := labels.NewRequirement(constants.KindLabel, selection.Equals, []string{constants.KindLabelValueProject})
+	if err != nil {
+		return nil, err
+	}
+
 	selector := labels.NewSelector()
-	selector = selector.Add(*organizationRequirement, *projectRequirement)
+	selector = selector.Add(*organizationRequirement, *projectRequirement, *kindRequirement)
 
 	options := &client.ListOptions{
 		LabelSelector: selector,
