@@ -316,14 +316,25 @@ func (p *Provisioner) Deprovision(ctx context.Context) error {
 }
 
 func (p *Provisioner) tags(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *coreapi.TagList {
-	return &coreapi.TagList{
-		coreapi.Tag{
-			Name:  coreconstants.ComputeClusterLabel,
-			Value: p.cluster.Name,
-		},
-		coreapi.Tag{
-			Name:  WorkloadPoolLabel,
-			Value: pool.Name,
-		},
+	out := coreapi.TagList{
+		{Name: coreconstants.ComputeClusterLabel, Value: p.cluster.Name},
+		{Name: WorkloadPoolLabel, Value: pool.Name},
 	}
+
+	// Propagate any additional tags from the cluster's spec, if present
+	for _, tag := range p.cluster.Spec.Tags {
+		hasTag := func(t coreapi.Tag) bool {
+			return t.Name == tag.Name
+		}
+
+		// Only add the tag if it doesn't already exist, so we prevent overwriting the default tags
+		if !slices.ContainsFunc(out, hasTag) {
+			out = append(out, coreapi.Tag{
+				Name:  tag.Name,
+				Value: tag.Value,
+			})
+		}
+	}
+
+	return &out
 }
