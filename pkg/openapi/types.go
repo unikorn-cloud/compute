@@ -165,8 +165,8 @@ type ImageSelector struct {
 	// Variant The operating system variant.
 	Variant *string `json:"variant,omitempty"`
 
-	// Version The operating system version to use, if not defined it will use the latest.
-	Version *string `json:"version,omitempty"`
+	// Version The operating system version to use.
+	Version string `json:"version"`
 }
 
 // KubernetesNameParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.

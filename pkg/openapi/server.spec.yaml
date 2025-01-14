@@ -286,14 +286,20 @@ components:
           type: string
         selector:
           $ref: '#/components/schemas/imageSelector'
+      # TODO: in the Typescript generator this causes a use to be declared as
+      # 'ComputeImage | null', which is a) wrong and b) inconvenient, thus needs
+      # investigation.
       oneOf:
-      - required: [id]
-      - required: [selector]
+      - required:
+        - id
+      - required:
+        - selector
     imageSelector:
       description: A server image selector.
       type: object
       required:
       - distro
+      - version
       properties:
         distro:
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/main/pkg/openapi/server.spec.yaml#/components/schemas/osDistro'
@@ -301,7 +307,7 @@ components:
           description: The operating system variant.
           type: string
         version:
-          description: The operating system version to use, if not defined it will use the latest.
+          description: The operating system version to use.
           type: string
     computeClusterWorkloadPool:
       description: A Compute cluster workload pool.

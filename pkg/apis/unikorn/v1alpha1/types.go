@@ -49,7 +49,7 @@ type ComputeWorkloadPoolImageSelector struct {
 	// Variant A free form variant e.g. desktop/server.
 	Variant *string `json:"variant,omitempty"`
 	// Version of the operating system e.g. "24.04".
-	Version *string `json:"version,omitempty"`
+	Version string `json:"version"`
 }
 
 type OsDistro string

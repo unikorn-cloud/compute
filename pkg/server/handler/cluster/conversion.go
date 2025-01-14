@@ -356,10 +356,8 @@ func (g *generator) filterImage(image regionapi.Image, m *openapi.MachinePool) b
 	}
 
 	// Is it the right version?
-	if m.Image.Selector.Version != nil {
-		if *m.Image.Selector.Version != image.Spec.Os.Version {
-			return true
-		}
+	if m.Image.Selector.Version != image.Spec.Os.Version {
+		return true
 	}
 
 	return false

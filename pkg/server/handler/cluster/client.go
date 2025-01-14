@@ -172,7 +172,7 @@ func (c *Client) createNetworkOpenstack(ctx context.Context, organizationID, pro
 	request := regionapi.NetworkWrite{
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        "compute-cluster-" + cluster.Name,
-			Description: ptr.To("PNetwork for cluster " + cluster.Name),
+			Description: ptr.To("Network for cluster " + cluster.Name),
 			Tags:        &tags,
 		},
 		Spec: &regionapi.NetworkWriteSpec{
