@@ -574,13 +574,13 @@ func (g *generator) generate(ctx context.Context, request *openapi.ComputeCluste
 		return nil, err
 	}
 
-	userinfo, err := authorization.UserinfoFromContext(ctx)
+	info, err := authorization.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	cluster := &unikornv1.ComputeCluster{
-		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, g.namespace, userinfo.Sub).WithOrganization(g.organizationID).WithProject(g.projectID).Get(),
+		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, g.namespace, info.Userinfo.Sub).WithOrganization(g.organizationID).WithProject(g.projectID).Get(),
 		Spec: unikornv1.ComputeClusterSpec{
 			Tags:          conversion.GenerateTagList(request.Metadata.Tags),
 			RegionID:      request.Spec.RegionId,
