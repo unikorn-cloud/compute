@@ -90,6 +90,7 @@ func NewClient(client client.Client, namespace string, options *Options, identit
 		client:    client,
 		namespace: namespace,
 		options:   options,
+		identity:  identity,
 		region:    region,
 	}
 }
@@ -170,7 +171,7 @@ func (c *Client) generateAllocations(ctx context.Context, organizationID string,
 
 	request := &identityapi.AllocationWrite{
 		Metadata: coreapi.ResourceWriteMetadata{
-			Name: "unused",
+			Name: constants.UndefinedName,
 		},
 		Spec: identityapi.AllocationSpec{
 			Kind: "kubernetescluster",
