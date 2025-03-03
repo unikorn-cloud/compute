@@ -36,6 +36,15 @@ type ComputeWorkloadPoolSpec struct {
 	UserData []byte `json:"userData,omitempty"`
 	// ImageSelector is the image selector to use for the pool.
 	ImageSelector *ComputeWorkloadPoolImageSelector `json:"imageSelector,omitempty"`
+	// AllowedAddressPairs is a list of allowed address pairs for the network interface. This will allow multiple MAC/IP address (range) pairs to pass through this port.
+	AllowedAddressPairs []ComputeWorkloadPoolAddressPair `json:"allowedAddressPairs,omitempty"`
+}
+
+type ComputeWorkloadPoolAddressPair struct {
+	// CIDR is the CIDR block to allow traffic from.
+	CIDR unikornv1core.IPv4Prefix `json:"cidr"`
+	// Optional MAC address to allow traffic to/from.
+	MACAddress string `json:"macAddress,omitempty"`
 }
 
 type PublicIPAllocationSpec struct {

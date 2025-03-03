@@ -231,6 +231,25 @@ components:
           description: UserData contains base64-encoded configuration information or scripts to use upon launch.
           type: string
           format: byte
+        allowedAddressPairs:
+          $ref: '#/components/schemas/allowedAddressPairList'
+    allowedAddressPairList:
+      description: A list of allowed address pairs.
+      type: array
+      items:
+        $ref: '#/components/schemas/allowedAddressPair'
+    allowedAddressPair:
+      description: Allow multiple MAC/IP address (range) pairs to pass through this network port.
+      type: object
+      required:
+      - cidr
+      properties:
+        cidr:
+          description: The CIDR to allow.
+          type: string
+        macAddress:
+          description: The MAC address to allow.
+          type: string
     firewallRules:
       description: A list of firewall rules applied to a workload pool.
       type: array
@@ -457,6 +476,8 @@ components:
                     - 172.16.0.0/12
                 publicIPAllocation:
                   enabled: true
+                allowedAddressPairs:
+                  - cidr: 10.8.0.0/16
   responses:
     computeClusterResponse:
       description: A Compute cluster.
