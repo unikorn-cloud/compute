@@ -464,16 +464,17 @@ func (g *generator) generateAllowedAddressPairs(in *openapi.AllowedAddressPairLi
 	}
 
 	out := make([]unikornv1.ComputeWorkloadPoolAddressPair, len(*in))
+
 	for i, ap := range *in {
+		out[i] = unikornv1.ComputeWorkloadPoolAddressPair{}
+
 		_, cidr, err := net.ParseCIDR(ap.Cidr)
 		if err != nil {
 			return nil, err
 		}
 
-		out[i] = unikornv1.ComputeWorkloadPoolAddressPair{
-			CIDR: unikornv1core.IPv4Prefix{
-				IPNet: *cidr,
-			},
+		out[i].CIDR = unikornv1core.IPv4Prefix{
+			IPNet: *cidr,
 		}
 
 		if ap.MacAddress != nil {
