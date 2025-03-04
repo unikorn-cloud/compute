@@ -77,13 +77,31 @@ func newGenerator(client client.Client, options *Options, region regionapi.Clien
 // convertMachine converts from a custom resource into the API definition.
 func (g *generator) convertMachine(in *unikornv1.ComputeWorkloadPoolSpec) *openapi.MachinePool {
 	return &openapi.MachinePool{
-		Replicas:           *in.Replicas,
-		FlavorId:           *in.FlavorID,
-		PublicIPAllocation: convertPublicIPAllocation(in.PublicIPAllocation),
-		Firewall:           convertFirewallRules(in.Firewall),
-		Image:              convertImage(in),
-		UserData:           convertUserData(in.UserData),
+		Replicas:            *in.Replicas,
+		FlavorId:            *in.FlavorID,
+		PublicIPAllocation:  convertPublicIPAllocation(in.PublicIPAllocation),
+		Firewall:            convertFirewallRules(in.Firewall),
+		Image:               convertImage(in),
+		UserData:            convertUserData(in.UserData),
+		AllowedAddressPairs: convertAllowedAddressPairs(in.AllowedAddressPairs),
 	}
+}
+
+// convertAllowedAddressPairs converts from a custom resource into the API definition.
+func convertAllowedAddressPairs(in []unikornv1.ComputeWorkloadPoolAddressPair) *openapi.AllowedAddressPairList {
+	out := make([]openapi.AllowedAddressPair, len(in))
+
+	for i := range in {
+		out[i] = openapi.AllowedAddressPair{
+			Cidr: in[i].CIDR.IPNet.String(),
+		}
+
+		if in[i].MACAddress != "" {
+			out[i].MacAddress = &in[i].MACAddress
+		}
+	}
+
+	return &out
 }
 
 // convertImage converts from a custom resource into the API definition.
@@ -416,14 +434,20 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 			return nil, err
 		}
 
+		allowedAddressPairs, err := g.generateAllowedAddressPairs(pool.Machine.AllowedAddressPairs)
+		if err != nil {
+			return nil, err
+		}
+
 		workloadPool := unikornv1.ComputeClusterWorkloadPoolsPoolSpec{
 			ComputeWorkloadPoolSpec: unikornv1.ComputeWorkloadPoolSpec{
-				Name:               pool.Name,
-				MachineGeneric:     *machine,
-				PublicIPAllocation: g.generatePublicIPAllocation(pool),
-				Firewall:           firewall,
-				UserData:           g.generateUserData(pool.Machine.UserData),
-				ImageSelector:      g.generateImageSelector(pool.Machine.Image),
+				Name:                pool.Name,
+				MachineGeneric:      *machine,
+				PublicIPAllocation:  g.generatePublicIPAllocation(pool),
+				Firewall:            firewall,
+				UserData:            g.generateUserData(pool.Machine.UserData),
+				ImageSelector:       g.generateImageSelector(pool.Machine.Image),
+				AllowedAddressPairs: allowedAddressPairs,
 			},
 		}
 
@@ -431,6 +455,34 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 	}
 
 	return workloadPools, nil
+}
+
+// generateAllowedAddressPairs generates the allowed address pairs part of a workload pool.
+func (g *generator) generateAllowedAddressPairs(in *openapi.AllowedAddressPairList) ([]unikornv1.ComputeWorkloadPoolAddressPair, error) {
+	if in == nil {
+		return nil, nil
+	}
+
+	out := make([]unikornv1.ComputeWorkloadPoolAddressPair, len(*in))
+
+	for i, ap := range *in {
+		out[i] = unikornv1.ComputeWorkloadPoolAddressPair{}
+
+		_, cidr, err := net.ParseCIDR(ap.Cidr)
+		if err != nil {
+			return nil, err
+		}
+
+		out[i].CIDR = unikornv1core.IPv4Prefix{
+			IPNet: *cidr,
+		}
+
+		if ap.MacAddress != nil {
+			out[i].MACAddress = *ap.MacAddress
+		}
+	}
+
+	return out, nil
 }
 
 // generateImageSelector generates the image selector part of a workload pool.

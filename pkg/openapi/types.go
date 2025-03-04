@@ -28,6 +28,18 @@ const (
 	Udp FirewallRuleProtocol = "udp"
 )
 
+// AllowedAddressPair Allow multiple MAC/IP address (range) pairs to pass through this network port.
+type AllowedAddressPair struct {
+	// Cidr The CIDR to allow.
+	Cidr string `json:"cidr"`
+
+	// MacAddress The MAC address to allow.
+	MacAddress *string `json:"macAddress,omitempty"`
+}
+
+// AllowedAddressPairList A list of allowed address pairs.
+type AllowedAddressPairList = []AllowedAddressPair
+
 // ComputeClusterMachineStatus Compute cluster machine status.
 type ComputeClusterMachineStatus struct {
 	// Hostname Machine hostname.
@@ -174,6 +186,9 @@ type KubernetesNameParameter = string
 
 // MachinePool A Compute cluster machine.
 type MachinePool struct {
+	// AllowedAddressPairs A list of allowed address pairs.
+	AllowedAddressPairs *AllowedAddressPairList `json:"allowedAddressPairs,omitempty"`
+
 	// Disk A volume.
 	Disk *Volume `json:"disk,omitempty"`
 
