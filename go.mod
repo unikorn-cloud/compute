@@ -8,9 +8,9 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spjmurray/go-util v0.1.3
-	github.com/unikorn-cloud/core v0.1.91-rc1
-	github.com/unikorn-cloud/identity v0.2.59-rc1
-	github.com/unikorn-cloud/region v0.1.50-rc2
+	github.com/unikorn-cloud/core v0.1.91
+	github.com/unikorn-cloud/identity v0.2.59
+	github.com/unikorn-cloud/region v0.1.50
 	go.opentelemetry.io/otel/sdk v1.34.0
 	k8s.io/api v0.32.2
 	k8s.io/apimachinery v0.32.2
