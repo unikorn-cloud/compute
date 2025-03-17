@@ -1,0 +1,39 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: cluster-resources.compute.unikorn-cloud.org
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+      - compute.unikorn-cloud.org
+      apiVersions:
+      - '*'
+      resources:
+      - computeclusters
+      operations:
+      - CREATE
+      - UPDATE
+  validations:
+  - expression: "object.metadata.?labels[?'unikorn-cloud.org/name'].orValue('') != ''"
+    message: Resource must contain a unikorn-cloud.org/name label
+  - expression: "object.metadata.?labels[?'unikorn-cloud.org/organization'].orValue('') != ''"
+    message: Resource must contain a unikorn-cloud.org/organization label
+  - expression: "object.metadata.?labels[?'unikorn-cloud.org/project'].orValue('') != ''"
+    message: Resource must contain a unikorn-cloud.org/project label
+  - expression: "object.metadata.?annotations[?'unikorn-cloud.org/identity-id'].orValue('') != ''"
+    message: Resource must contain a unikorn-cloud.org/identity-id annotations
+  - expression: "object.metadata.?annotations[?'unikorn-cloud.org/physical-network-id'].orValue('') != ''"
+    message: Resource must contain a unikorn-cloud.org/physical-network-id annotations
+  - expression: "object.metadata.?annotations[?'unikorn-cloud.org/allocation-id'].orValue('') != ''"
+    message: Resource must contain a unikorn-cloud.org/allocation-id annotation
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: cluster-resources.compute.unikorn-cloud.org
+spec:
+  policyName: cluster-resources.compute.unikorn-cloud.org
+  validationActions:
+  - Deny
