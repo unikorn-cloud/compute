@@ -13,5 +13,5 @@ spec:
     algorithm: RSA
     encoding: PKCS8
     size: 4096
-  secretName: unikorn-compute-client-certificate
+  secretName: {{ .Release.Namespace }}-client-certificate
   commonName: unikorn-compute

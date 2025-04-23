@@ -19,10 +19,36 @@ package region
 import (
 	"context"
 	"net/http"
+	"slices"
 
 	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 )
+
+// Regions lists all regions.
+func Regions(ctx context.Context, client regionapi.ClientWithResponsesInterface, organizationID string) ([]regionapi.RegionRead, error) {
+	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
+	}
+
+	regions := *resp.JSON200
+
+	filter := func(x regionapi.RegionRead) bool {
+		return x.Spec.Type == regionapi.Kubernetes
+	}
+
+	filtered, err := slices.DeleteFunc(regions, filter), nil
+	if err != nil {
+		return nil, err
+	}
+
+	return filtered, nil
+}
 
 // Flavors returns all Kubernetes compatible flavors.
 func Flavors(ctx context.Context, client regionapi.ClientWithResponsesInterface, organizationID, regionID string) ([]regionapi.Flavor, error) {

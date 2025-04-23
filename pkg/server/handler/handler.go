@@ -109,6 +109,29 @@ func (h *Handler) setUncacheable(w http.ResponseWriter) {
 	w.Header().Add("Cache-Control", "no-cache")
 }
 
+func (h *Handler) GetApiV1OrganizationsOrganizationIDRegions(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter) {
+	ctx := r.Context()
+
+	if err := rbac.AllowOrganizationScope(ctx, "compute:regions", identityapi.Read, organizationID); err != nil {
+		errors.HandleError(w, r, err)
+		return
+	}
+
+	client, err := h.regionClient(ctx)
+	if err != nil {
+		errors.HandleError(w, r, err)
+		return
+	}
+
+	result, err := region.Regions(ctx, client, organizationID)
+	if err != nil {
+		errors.HandleError(w, r, errors.OAuth2ServerError("unable to read regions").WithError(err))
+		return
+	}
+
+	util.WriteJSONResponse(w, r, http.StatusOK, result)
+}
+
 func (h *Handler) GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavors(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, regionID openapi.RegionIDParameter) {
 	ctx := r.Context()
 

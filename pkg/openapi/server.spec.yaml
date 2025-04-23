@@ -7,6 +7,27 @@ info:
     header.
   version: 0.1.0
 paths:
+  /api/v1/organizations/{organizationID}/regions:
+    description: |-
+      Accesses a filtered list of regions for use with different cluster types.
+      Use the query parameter to specify either physical (based on VMs and
+      baremetal nodes) or virtual (e.g. vCluster) compatible regions.
+    parameters:
+    - $ref: '#/components/parameters/organizationIDParameter'
+    get:
+      description: |-
+        Lists a curated set of regions.
+      security:
+      - oauth2Authentication: []
+      responses:
+        '200':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/main/pkg/openapi/server.spec.yaml#/components/responses/regionsResponse'
+        '400':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/unauthorizedResponse'
+        '500': 
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/internalServerErrorResponse'
   /api/v1/organizations/{organizationID}/regions/{regionID}/flavors:
     description: |-
       Compute flavor services.
