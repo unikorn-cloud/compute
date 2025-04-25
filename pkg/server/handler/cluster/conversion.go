@@ -27,10 +27,10 @@ import (
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/compute/pkg/openapi"
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
-	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
+	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
@@ -601,7 +601,7 @@ func (g *generator) lookupFlavor(ctx context.Context, request *openapi.ComputeCl
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("%w: flavor GET expected 200 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
+		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	flavors := *resp.JSON200

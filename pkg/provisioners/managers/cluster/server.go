@@ -29,8 +29,8 @@ import (
 	computeprovisioners "github.com/unikorn-cloud/compute/pkg/provisioners"
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreconstants "github.com/unikorn-cloud/core/pkg/constants"
-	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
+	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	corev1 "k8s.io/api/core/v1"
@@ -74,7 +74,7 @@ func (p *Provisioner) deleteServer(ctx context.Context, client regionapi.ClientW
 	}
 
 	if resp.StatusCode() != http.StatusAccepted {
-		return fmt.Errorf("%w: server DELETE expected 202 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
+		return coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	// TODO: add to the status in a deprovisioning state.
@@ -166,7 +166,7 @@ func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientW
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return fmt.Errorf("%w: server POST expected 201 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
+		return coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	machine := *resp.JSON201
@@ -203,7 +203,7 @@ func (p *Provisioner) getServers(ctx context.Context, client regionapi.ClientWit
 	}
 
 	if response.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("%w: servers GET expected 200 got %d", coreerrors.ErrAPIStatus, response.StatusCode())
+		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
 	}
 
 	// Filter out servers that aren't from this cluster.
