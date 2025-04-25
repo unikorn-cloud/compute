@@ -35,6 +35,7 @@ import (
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
+	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
@@ -48,8 +49,6 @@ import (
 
 var (
 	ErrConsistency = goerrors.New("consistency error")
-
-	ErrAPI = goerrors.New("remote api error")
 )
 
 type Options struct {
@@ -211,7 +210,7 @@ func (c *Client) createAllocation(ctx context.Context, organizationID, projectID
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return nil, fmt.Errorf("%w: unexpected status code %d", ErrAPI, resp.StatusCode())
+		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	return resp.JSON201, nil
@@ -229,7 +228,7 @@ func (c *Client) updateAllocation(ctx context.Context, organizationID, projectID
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return fmt.Errorf("%w: unexpected status code %d", ErrAPI, resp.StatusCode())
+		return coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	return nil
@@ -242,7 +241,7 @@ func (c *Client) deleteAllocation(ctx context.Context, organizationID, projectID
 	}
 
 	if resp.StatusCode() != http.StatusAccepted {
-		return fmt.Errorf("%w: unexpected status code %d", ErrAPI, resp.StatusCode())
+		return coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	return nil
@@ -273,7 +272,7 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return nil, errors.OAuth2ServerError("unable to create identity")
+		return nil, errors.OAuth2ServerError("unable to create identity").WithError(coreapiutils.ExtractError(resp.StatusCode(), resp))
 	}
 
 	return resp.JSON201, nil
@@ -311,7 +310,7 @@ func (c *Client) createNetworkOpenstack(ctx context.Context, organizationID, pro
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return nil, errors.OAuth2ServerError("unable to create network")
+		return nil, errors.OAuth2ServerError("unable to create network").WithError(coreapiutils.ExtractError(resp.StatusCode(), resp))
 	}
 
 	return resp.JSON201, nil

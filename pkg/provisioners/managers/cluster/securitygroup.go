@@ -29,9 +29,9 @@ import (
 	computeprovisioners "github.com/unikorn-cloud/compute/pkg/provisioners"
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreconstants "github.com/unikorn-cloud/core/pkg/constants"
-	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/provisioners"
+	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	"k8s.io/utils/ptr"
@@ -188,7 +188,7 @@ func (p *Provisioner) createSecurityGroup(ctx context.Context, client regionapi.
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return fmt.Errorf("%w: securitygroup POST expected 201 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
+		return coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	return nil
@@ -201,7 +201,7 @@ func (p *Provisioner) deleteSecurityGroup(ctx context.Context, client regionapi.
 	}
 
 	if resp.StatusCode() != http.StatusAccepted && resp.StatusCode() != http.StatusNotFound {
-		return fmt.Errorf("%w: securitygroup DELETE expected 202 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
+		return coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	return nil
@@ -214,7 +214,7 @@ func (p *Provisioner) createSecurityGroupRule(ctx context.Context, client region
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return fmt.Errorf("%w: securitygrouprule POST expected 201 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
+		return coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	return nil
@@ -227,7 +227,7 @@ func (p *Provisioner) deleteSecurityGroupRule(ctx context.Context, client region
 	}
 
 	if resp.StatusCode() != http.StatusAccepted && resp.StatusCode() != http.StatusNotFound {
-		return fmt.Errorf("%w: securitygrouprule DELETE expected 202 got %d", coreerrors.ErrAPIStatus, resp.StatusCode())
+		return coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	return nil
@@ -252,7 +252,7 @@ func (p *Provisioner) getSecurityGroups(ctx context.Context, client regionapi.Cl
 	}
 
 	if response.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("%w: securitygroup GET expected 200 got %d", coreerrors.ErrAPIStatus, response.StatusCode())
+		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
 	}
 
 	// Filter out security groups that aren't from this cluster.
@@ -296,7 +296,7 @@ func (p *Provisioner) getSecurityGroupRules(ctx context.Context, client regionap
 	}
 
 	if response.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("%w: securitygrouprule GET expected 200 got %d", coreerrors.ErrAPIStatus, response.StatusCode())
+		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
 	}
 
 	out := map[string]*regionapi.SecurityGroupRuleRead{}

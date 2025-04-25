@@ -18,15 +18,10 @@ package region
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"net/http"
 
+	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
-)
-
-var (
-	ErrStatusCode = errors.New("unexpected status code")
 )
 
 // Flavors returns all Kubernetes compatible flavors.
@@ -37,7 +32,7 @@ func Flavors(ctx context.Context, client regionapi.ClientWithResponsesInterface,
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("%w: expected 200, got %d", ErrStatusCode, resp.StatusCode())
+		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	flavors := *resp.JSON200
@@ -54,7 +49,7 @@ func Images(ctx context.Context, client regionapi.ClientWithResponsesInterface, 
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("%w: expected 200, got %d", ErrStatusCode, resp.StatusCode())
+		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
 	}
 
 	images := *resp.JSON200

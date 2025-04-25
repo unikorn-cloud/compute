@@ -32,10 +32,10 @@ import (
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
 	coreconstants "github.com/unikorn-cloud/core/pkg/constants"
-	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	"github.com/unikorn-cloud/core/pkg/manager"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/provisioners"
+	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
@@ -141,7 +141,7 @@ func (p *Provisioner) getIdentity(ctx context.Context, client regionapi.ClientWi
 	}
 
 	if response.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("%w: identity GET expected 200 got %d", coreerrors.ErrAPIStatus, response.StatusCode())
+		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
 	}
 
 	resource := response.JSON200
@@ -171,7 +171,7 @@ func (p *Provisioner) deleteIdentity(ctx context.Context, client regionapi.Clien
 	// we can delete the cluster, a not found means it's been deleted already
 	// and again can proceed.  The goal here is not to leak resources.
 	if statusCode != http.StatusAccepted && statusCode != http.StatusNotFound {
-		return fmt.Errorf("%w: identity DELETE expected 202,404 got %d", ErrResourceDependency, statusCode)
+		return coreapiutils.ExtractError(response.StatusCode(), response)
 	}
 
 	return nil
@@ -192,7 +192,7 @@ func (p *Provisioner) getNetwork(ctx context.Context, client regionapi.ClientWit
 	}
 
 	if response.StatusCode() != http.StatusOK {
-		return nil, fmt.Errorf("%w: network GET expected 200 got %d", coreerrors.ErrAPIStatus, response.StatusCode())
+		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
 	}
 
 	resource := response.JSON200
