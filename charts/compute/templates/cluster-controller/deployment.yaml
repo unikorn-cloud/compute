@@ -22,7 +22,7 @@ spec:
         {{- include "unikorn.region.flags" . | nindent 8 }}
         {{- include "unikorn.otlp.flags" . | nindent 8 }}
         - --client-certificate-namespace={{ .Release.Namespace }}
-        - --client-certificate-name=unikorn-compute-client-certificate
+        - --client-certificate-name={{ .Release.Namespace }}-client-certificate
         ports:
         - name: prometheus
           containerPort: 8080
