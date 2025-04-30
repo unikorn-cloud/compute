@@ -93,7 +93,7 @@ func convertAllowedAddressPairs(in []unikornv1.ComputeWorkloadPoolAddressPair) *
 
 	for i := range in {
 		out[i] = openapi.AllowedAddressPair{
-			Cidr: in[i].CIDR.IPNet.String(),
+			Cidr: in[i].CIDR.String(),
 		}
 
 		if in[i].MACAddress != "" {
@@ -157,7 +157,7 @@ func convertPrefixes(in []unikornv1core.IPv4Prefix) []string {
 	out := make([]string, len(in))
 
 	for i, prefix := range in {
-		out[i] = prefix.IPNet.String()
+		out[i] = prefix.String()
 	}
 
 	return out

@@ -108,7 +108,7 @@ func (p *Provisioner) generateRequiredSecurityGroupRule(pool *unikornv1.ComputeC
 		Spec: regionapi.SecurityGroupRuleWriteSpec{
 			Direction: regionapi.SecurityGroupRuleWriteSpecDirection(in.Direction),
 			Protocol:  regionapi.SecurityGroupRuleWriteSpecProtocol(in.Protocol),
-			Cidr:      prefix.IPNet.String(),
+			Cidr:      prefix.String(),
 		},
 	}
 
