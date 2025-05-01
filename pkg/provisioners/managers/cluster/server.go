@@ -143,9 +143,9 @@ func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientW
 			Tags:        p.tags(pool),
 		},
 		Spec: regionapi.ServerWriteSpec{
-			FlavorId: *pool.FlavorID,
+			FlavorId: pool.FlavorID,
 			Image: regionapi.ServerImage{
-				Id: *pool.ImageID,
+				Id: pool.ImageID,
 			},
 			Networks: regionapi.ServerNetworkList{
 				regionapi.ServerNetwork{
@@ -189,7 +189,7 @@ func (p *Provisioner) serverReconciliationList(provisioned computeprovisioners.P
 	// Things that should exist...
 	desiredNames := set.New[string]()
 
-	for i := range *desired.Replicas {
+	for i := range desired.Replicas {
 		desiredNames.Add(serverName(desired, i))
 	}
 
