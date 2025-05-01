@@ -34,8 +34,6 @@ import (
 	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
-	"k8s.io/utils/ptr"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -77,8 +75,8 @@ func newGenerator(client client.Client, options *Options, region regionapi.Clien
 // convertMachine converts from a custom resource into the API definition.
 func (g *generator) convertMachine(in *unikornv1.ComputeWorkloadPoolSpec) *openapi.MachinePool {
 	return &openapi.MachinePool{
-		Replicas:            *in.Replicas,
-		FlavorId:            *in.FlavorID,
+		Replicas:            in.Replicas,
+		FlavorId:            in.FlavorID,
 		PublicIPAllocation:  convertPublicIPAllocation(in.PublicIPAllocation),
 		Firewall:            convertFirewallRules(in.Firewall),
 		Image:               convertImage(in),
@@ -108,7 +106,7 @@ func convertAllowedAddressPairs(in []unikornv1.ComputeWorkloadPoolAddressPair) *
 func convertImage(in *unikornv1.ComputeWorkloadPoolSpec) openapi.ComputeImage {
 	if in.ImageSelector == nil {
 		return openapi.ComputeImage{
-			Id: in.ImageID,
+			Id: &in.ImageID,
 		}
 	}
 
@@ -389,7 +387,7 @@ func (g *generator) generateNetwork() *unikornv1core.NetworkGeneric {
 	dnsNameservers := g.options.DNSNameservers
 
 	network := &unikornv1core.NetworkGeneric{
-		NodeNetwork:    &unikornv1core.IPv4Prefix{IPNet: nodeNetwork},
+		NodeNetwork:    unikornv1core.IPv4Prefix{IPNet: nodeNetwork},
 		DNSNameservers: unikornv1core.IPv4AddressSliceFromIPSlice(dnsNameservers),
 	}
 
@@ -404,9 +402,9 @@ func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi
 	}
 
 	machine := &unikornv1core.MachineGeneric{
-		Replicas: &m.Replicas,
-		ImageID:  ptr.To(image.Metadata.Id),
-		FlavorID: &flavor.Metadata.Id,
+		Replicas: m.Replicas,
+		ImageID:  image.Metadata.Id,
+		FlavorID: flavor.Metadata.Id,
 	}
 
 	return machine, nil

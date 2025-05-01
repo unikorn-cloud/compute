@@ -148,12 +148,12 @@ func (c *Client) generateAllocations(ctx context.Context, organizationID string,
 
 	// NOTE: the control plane is "free".
 	for _, pool := range resource.Spec.WorkloadPools.Pools {
-		serversMinimum := *pool.Replicas
+		serversMinimum := pool.Replicas
 
 		serversCommitted += serversMinimum
 
 		flavorByID := func(f regionapi.Flavor) bool {
-			return f.Metadata.Id == *pool.FlavorID
+			return f.Metadata.Id == pool.FlavorID
 		}
 
 		index := slices.IndexFunc(flavors, flavorByID)
