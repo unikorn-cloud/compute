@@ -26,6 +26,7 @@ import (
 
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/compute/pkg/openapi"
+	"github.com/unikorn-cloud/compute/pkg/server/handler/region"
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
@@ -49,7 +50,7 @@ type generator struct {
 	// options allows access to resource defaults.
 	options *Options
 	// region is a client to access regions.
-	region regionapi.ClientWithResponsesInterface
+	region *region.Client
 	// namespace the resource is provisioned in.
 	namespace string
 	// organizationID is the unique organization identifier.
@@ -60,7 +61,7 @@ type generator struct {
 	current *unikornv1.ComputeCluster
 }
 
-func newGenerator(client client.Client, options *Options, region regionapi.ClientWithResponsesInterface, namespace, organizationID, projectID string, current *unikornv1.ComputeCluster) *generator {
+func newGenerator(client client.Client, options *Options, region *region.Client, namespace, organizationID, projectID string, current *unikornv1.ComputeCluster) *generator {
 	return &generator{
 		client:         client,
 		options:        options,
@@ -325,7 +326,12 @@ func (g *generator) convertList(in *unikornv1.ComputeClusterList) openapi.Comput
 
 // chooseImages returns an image for the requested machine and flavor.
 func (g *generator) chooseImage(ctx context.Context, request *openapi.ComputeClusterWrite, m *openapi.MachinePool, _ *regionapi.Flavor) (*regionapi.Image, error) {
-	resp, err := g.region.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, g.organizationID, request.Spec.RegionId)
+	client, err := g.region.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
 		return nil, err
 	}
@@ -593,7 +599,12 @@ func generateFirewallRules(in *openapi.FirewallRules) ([]unikornv1.FirewallRule,
 // lookupFlavor resolves the flavor from its name.
 // NOTE: It looks like garbage performance, but the provider should be memoized...
 func (g *generator) lookupFlavor(ctx context.Context, request *openapi.ComputeClusterWrite, id string) (*regionapi.Flavor, error) {
-	resp, err := g.region.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, g.organizationID, request.Spec.RegionId)
+	client, err := g.region.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
 		return nil, err
 	}

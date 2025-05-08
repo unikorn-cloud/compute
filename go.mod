@@ -8,7 +8,7 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spjmurray/go-util v0.1.3
-	github.com/unikorn-cloud/core v0.1.95
+	github.com/unikorn-cloud/core v0.1.96-rc1
 	github.com/unikorn-cloud/identity v0.2.63
 	github.com/unikorn-cloud/region v0.1.54
 	go.opentelemetry.io/otel/sdk v1.35.0
@@ -22,6 +22,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.1 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/brunoga/deep v1.2.4 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/coreos/go-oidc/v3 v3.14.1 // indirect

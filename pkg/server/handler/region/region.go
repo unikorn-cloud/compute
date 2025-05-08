@@ -20,13 +20,55 @@ import (
 	"context"
 	"net/http"
 	"slices"
+	"time"
 
 	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
+	"github.com/unikorn-cloud/core/pkg/util/cache"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 )
 
-// Regions lists all regions.
-func Regions(ctx context.Context, client regionapi.ClientWithResponsesInterface, organizationID string) ([]regionapi.RegionRead, error) {
+const (
+	defaultCacheSize = 4096
+)
+
+// ClientGetterFunc allows us to lazily instantiate a client only when needed to
+// avoid the TLS handshake and token exchange.
+type ClientGetterFunc func(context.Context) (regionapi.ClientWithResponsesInterface, error)
+
+// Client provides a caching layer for retrieval of region assets, and lazy population.
+type Client struct {
+	clientGetter ClientGetterFunc
+	regionCache  *cache.LRUExpireCache[string, []regionapi.RegionRead]
+	flavorCache  *cache.LRUExpireCache[string, []regionapi.Flavor]
+	imageCache   *cache.LRUExpireCache[string, []regionapi.Image]
+}
+
+// New returns a new client.
+func New(clientGetter ClientGetterFunc) *Client {
+	return &Client{
+		clientGetter: clientGetter,
+		regionCache:  cache.NewLRUExpireCache[string, []regionapi.RegionRead](defaultCacheSize),
+		flavorCache:  cache.NewLRUExpireCache[string, []regionapi.Flavor](defaultCacheSize),
+		imageCache:   cache.NewLRUExpireCache[string, []regionapi.Image](defaultCacheSize),
+	}
+}
+
+// Client returns a client.
+func (c *Client) Client(ctx context.Context) (regionapi.ClientWithResponsesInterface, error) {
+	return c.clientGetter(ctx)
+}
+
+// List lists all regions.
+func (c *Client) List(ctx context.Context, organizationID string) ([]regionapi.RegionRead, error) {
+	if regions, ok := c.regionCache.Get(organizationID); ok {
+		return regions, nil
+	}
+
+	client, err := c.clientGetter(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(ctx, organizationID)
 	if err != nil {
 		return nil, err
@@ -47,11 +89,24 @@ func Regions(ctx context.Context, client regionapi.ClientWithResponsesInterface,
 		return nil, err
 	}
 
+	c.regionCache.Add(organizationID, filtered, time.Hour)
+
 	return filtered, nil
 }
 
-// Flavors returns all Kubernetes compatible flavors.
-func Flavors(ctx context.Context, client regionapi.ClientWithResponsesInterface, organizationID, regionID string) ([]regionapi.Flavor, error) {
+// Flavors returns all compute compatible flavors.
+func (c *Client) Flavors(ctx context.Context, organizationID, regionID string) ([]regionapi.Flavor, error) {
+	cacheKey := organizationID + ":" + regionID
+
+	if flavors, ok := c.flavorCache.Get(cacheKey); ok {
+		return flavors, nil
+	}
+
+	client, err := c.clientGetter(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
@@ -63,12 +118,25 @@ func Flavors(ctx context.Context, client regionapi.ClientWithResponsesInterface,
 
 	flavors := *resp.JSON200
 
+	c.flavorCache.Add(cacheKey, flavors, time.Hour)
+
 	// TODO: filtering.
 	return flavors, nil
 }
 
-// Images returns all Kubernetes compatible images.
-func Images(ctx context.Context, client regionapi.ClientWithResponsesInterface, organizationID, regionID string) ([]regionapi.Image, error) {
+// Images returns all compute compatible images.
+func (c *Client) Images(ctx context.Context, organizationID, regionID string) ([]regionapi.Image, error) {
+	cacheKey := organizationID + ":" + regionID
+
+	if images, ok := c.imageCache.Get(cacheKey); ok {
+		return images, nil
+	}
+
+	client, err := c.clientGetter(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
@@ -79,6 +147,8 @@ func Images(ctx context.Context, client regionapi.ClientWithResponsesInterface, 
 	}
 
 	images := *resp.JSON200
+
+	c.imageCache.Add(cacheKey, images, time.Hour)
 
 	// TODO: filtering.
 	return images, nil
