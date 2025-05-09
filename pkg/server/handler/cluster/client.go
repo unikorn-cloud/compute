@@ -30,6 +30,7 @@ import (
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/compute/pkg/openapi"
 	"github.com/unikorn-cloud/compute/pkg/server/handler/common"
+	"github.com/unikorn-cloud/compute/pkg/server/handler/identity"
 	"github.com/unikorn-cloud/compute/pkg/server/handler/region"
 	"github.com/unikorn-cloud/core/pkg/constants"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
@@ -77,14 +78,14 @@ type Client struct {
 	options *Options
 
 	// identity is a client to access the identity service.
-	identity identityapi.ClientWithResponsesInterface
+	identity *identity.Client
 
 	// region is a client to access regions.
-	region regionapi.ClientWithResponsesInterface
+	region *region.Client
 }
 
 // NewClient returns a new client with required parameters.
-func NewClient(client client.Client, namespace string, options *Options, identity identityapi.ClientWithResponsesInterface, region regionapi.ClientWithResponsesInterface) *Client {
+func NewClient(client client.Client, namespace string, options *Options, identity *identity.Client, region *region.Client) *Client {
 	return &Client{
 		client:    client,
 		namespace: namespace,
@@ -137,7 +138,7 @@ func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikorn
 }
 
 func (c *Client) generateAllocations(ctx context.Context, organizationID string, resource *unikornv1.ComputeCluster) (*identityapi.AllocationWrite, error) {
-	flavors, err := region.Flavors(ctx, c.region, organizationID, resource.Spec.RegionID)
+	flavors, err := c.region.Flavors(ctx, organizationID, resource.Spec.RegionID)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +205,12 @@ func (c *Client) createAllocation(ctx context.Context, organizationID, projectID
 		return nil, err
 	}
 
-	resp, err := c.identity.PostApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsWithResponse(ctx, organizationID, projectID, *allocations)
+	client, err := c.identity.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsWithResponse(ctx, organizationID, projectID, *allocations)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +228,12 @@ func (c *Client) updateAllocation(ctx context.Context, organizationID, projectID
 		return err
 	}
 
-	resp, err := c.identity.PutApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, resource.Annotations[constants.AllocationAnnotation], *allocations)
+	client, err := c.identity.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.PutApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, resource.Annotations[constants.AllocationAnnotation], *allocations)
 	if err != nil {
 		return err
 	}
@@ -235,7 +246,12 @@ func (c *Client) updateAllocation(ctx context.Context, organizationID, projectID
 }
 
 func (c *Client) deleteAllocation(ctx context.Context, organizationID, projectID, allocationID string) error {
-	resp, err := c.identity.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, allocationID)
+	client, err := c.identity.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, allocationID)
 	if err != nil {
 		return err
 	}
@@ -266,7 +282,12 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 		},
 	}
 
-	resp, err := c.region.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(ctx, organizationID, projectID, request)
+	client, err := c.region.Client(ctx)
+	if err != nil {
+		return nil, errors.OAuth2ServerError("unable to create region client").WithError(err)
+	}
+
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(ctx, organizationID, projectID, request)
 	if err != nil {
 		return nil, errors.OAuth2ServerError("unable to create identity").WithError(err)
 	}
@@ -304,7 +325,12 @@ func (c *Client) createNetworkOpenstack(ctx context.Context, organizationID, pro
 		},
 	}
 
-	resp, err := c.region.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
+	client, err := c.region.Client(ctx)
+	if err != nil {
+		return nil, errors.OAuth2ServerError("unable to create region client").WithError(err)
+	}
+
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
 	if err != nil {
 		return nil, errors.OAuth2ServerError("unable to create network").WithError(err)
 	}
@@ -452,16 +478,16 @@ func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterI
 		return errors.OAuth2ServerError("failed to merge annotations").WithError(err)
 	}
 
-	if err := c.updateAllocation(ctx, organizationID, projectID, required); err != nil {
-		return errors.OAuth2ServerError("failed to update quota allocation").WithError(err)
-	}
-
 	// Experience has taught me that modifying caches by accident is a bad thing
 	// so be extra safe and deep copy the existing resource.
 	updated := current.DeepCopy()
 	updated.Labels = required.Labels
 	updated.Annotations = required.Annotations
 	updated.Spec = required.Spec
+
+	if err := c.updateAllocation(ctx, organizationID, projectID, updated); err != nil {
+		return errors.OAuth2ServerError("failed to update quota allocation").WithError(err)
+	}
 
 	if err := c.client.Patch(ctx, updated, client.MergeFrom(current)); err != nil {
 		return errors.OAuth2ServerError("failed to patch cluster").WithError(err)
