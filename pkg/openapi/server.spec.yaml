@@ -514,6 +514,7 @@ components:
               projectId: cae219d7-10e5-4601-8c2c-ee7e066b93ce
               creationTime: 2023-07-31T10:45:45Z
               provisioningStatus: provisioned
+              healthStatus: healthy
             spec:
               regionId: b059b3e6-9ae5-42b7-94b4-f42fb7a6baee
               workloadPools:
@@ -563,6 +564,7 @@ components:
               projectId: cae219d7-10e5-4601-8c2c-ee7e066b93ce
               creationTime: 2023-07-31T10:45:45Z
               provisioningStatus: provisioned
+              healthStatus: healthy
             spec:
               regionId: b059b3e6-9ae5-42b7-94b4-f42fb7a6baee
               workloadPools:

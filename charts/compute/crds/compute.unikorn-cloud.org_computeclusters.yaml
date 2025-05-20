@@ -213,7 +213,6 @@ spec:
                               type: boolean
                           type: object
                         replicas:
-                          default: 3
                           description: Replicas is the initial pool size to deploy.
                           minimum: 0
                           type: integer
@@ -265,6 +264,8 @@ spec:
                       - Errored
                       - Deprovisioning
                       - Deprovisioned
+                      - Healthy
+                      - Degraded
                       type: string
                     status:
                       description: |-
@@ -275,6 +276,7 @@ spec:
                       description: Type is the type of the condition.
                       enum:
                       - Available
+                      - Healthy
                       type: string
                   required:
                   - lastTransitionTime
@@ -326,6 +328,8 @@ spec:
                                   - Errored
                                   - Deprovisioning
                                   - Deprovisioned
+                                  - Healthy
+                                  - Degraded
                                   type: string
                                 status:
                                   description: |-
@@ -336,6 +340,7 @@ spec:
                                   description: Type is the type of the condition.
                                   enum:
                                   - Available
+                                  - Healthy
                                   type: string
                               required:
                               - lastTransitionTime
