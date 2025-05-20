@@ -295,14 +295,8 @@ func convertClusterStatus(in *unikornv1.ComputeClusterStatus) *openapi.ComputeCl
 
 // convert converts from a custom resource into the API definition.
 func (g *generator) convert(in *unikornv1.ComputeCluster) *openapi.ComputeClusterRead {
-	provisioningStatus := coreapi.ResourceProvisioningStatusUnknown
-
-	if condition, err := in.StatusConditionRead(unikornv1core.ConditionAvailable); err == nil {
-		provisioningStatus = conversion.ConvertStatusCondition(condition)
-	}
-
 	out := &openapi.ComputeClusterRead{
-		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags, provisioningStatus),
+		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags),
 		Spec: openapi.ComputeClusterSpec{
 			RegionId:      in.Spec.RegionID,
 			WorkloadPools: g.convertWorkloadPools(in),
