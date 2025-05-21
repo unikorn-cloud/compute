@@ -13,6 +13,7 @@ REVISION := $(shell git rev-parse HEAD)
 CONTROLLERS = \
   unikorn-compute-cluster-controller\
   unikorn-compute-server \
+  unikorn-compute-monitor
 
 # Release will do cross compliation of all images for the 'all' target.
 # Note we aren't fucking about with docker here because that opens up a

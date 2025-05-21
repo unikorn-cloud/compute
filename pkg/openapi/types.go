@@ -60,6 +60,7 @@ type ComputeClusterMachinesStatus = []ComputeClusterMachineStatus
 
 // ComputeClusterRead Compute cluster read.
 type ComputeClusterRead struct {
+	// Metadata Metadata required by project scoped resource reads.
 	Metadata externalRef0.ProjectScopedResourceReadMetadata `json:"metadata"`
 
 	// Spec Compute cluster creation parameters.
@@ -116,7 +117,7 @@ type ComputeClusterWorkloadPoolsStatus = []ComputeClusterWorkloadPoolStatus
 
 // ComputeClusterWrite Compute cluster create or update.
 type ComputeClusterWrite struct {
-	// Metadata Resource metadata valid for all API resource reads and writes.
+	// Metadata Metadata required for all API resource reads and writes.
 	Metadata externalRef0.ResourceWriteMetadata `json:"metadata"`
 
 	// Spec Compute cluster creation parameters.
