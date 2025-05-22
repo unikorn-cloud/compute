@@ -29,6 +29,7 @@ const (
 )
 
 // AllowedAddressPair Allow multiple MAC/IP address (range) pairs to pass through this network port.
+// Typically required when the machine is operating as a router.
 type AllowedAddressPair struct {
 	// Cidr The CIDR to allow.
 	Cidr string `json:"cidr"`
@@ -90,7 +91,7 @@ type ComputeClusterStatus struct {
 
 // ComputeClusterWorkloadPool A Compute cluster workload pool.
 type ComputeClusterWorkloadPool struct {
-	// Machine A Compute cluster machine.
+	// Machine A Compute cluster machine pool.
 	Machine MachinePool `json:"machine"`
 
 	// Name Workload pool name.
@@ -182,15 +183,15 @@ type ImageSelector struct {
 	Version string `json:"version"`
 }
 
-// KubernetesNameParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+// KubernetesNameParameter A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
 type KubernetesNameParameter = string
 
-// MachinePool A Compute cluster machine.
+// MachinePool A Compute cluster machine pool.
 type MachinePool struct {
 	// AllowedAddressPairs A list of allowed address pairs.
 	AllowedAddressPairs *AllowedAddressPairList `json:"allowedAddressPairs,omitempty"`
 
-	// Disk A volume.
+	// Disk A volume.  This is currently only valid for VM based flavors.
 	Disk *Volume `json:"disk,omitempty"`
 
 	// Firewall A list of firewall rules applied to a workload pool.
@@ -205,7 +206,7 @@ type MachinePool struct {
 	// PublicIPAllocation A public IP allocation settings.
 	PublicIPAllocation *PublicIPAllocation `json:"publicIPAllocation,omitempty"`
 
-	// Replicas Number of machines for a statically sized pool or the maximum for an auto-scaled pool.
+	// Replicas Number of machines.
 	Replicas int `json:"replicas"`
 
 	// UserData UserData contains base64-encoded configuration information or scripts to use upon launch.
@@ -218,22 +219,22 @@ type PublicIPAllocation struct {
 	Enabled bool `json:"enabled"`
 }
 
-// Volume A volume.
+// Volume A volume.  This is currently only valid for VM based flavors.
 type Volume struct {
 	// Size Disk size in GiB.
 	Size int `json:"size"`
 }
 
-// ClusterIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+// ClusterIDParameter A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
 type ClusterIDParameter = KubernetesNameParameter
 
-// OrganizationIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+// OrganizationIDParameter A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
 type OrganizationIDParameter = KubernetesNameParameter
 
-// ProjectIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+// ProjectIDParameter A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
 type ProjectIDParameter = KubernetesNameParameter
 
-// RegionIDParameter A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+// RegionIDParameter A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
 type RegionIDParameter = KubernetesNameParameter
 
 // ComputeClusterResponse Compute cluster read.

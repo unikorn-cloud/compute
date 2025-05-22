@@ -3,20 +3,17 @@ info:
   title: Compute Service API
   description: |-
     The Compute Service API provides services that allows provisioning and life cycle
-    management of Compute clusters. Requests must specify the HTML content type
-    header.
-  version: 0.1.0
+    management of Compute clusters.
+  version: 1.1.0
 paths:
   /api/v1/organizations/{organizationID}/regions:
     description: |-
       Accesses a filtered list of regions for use with different cluster types.
-      Use the query parameter to specify either physical (based on VMs and
-      baremetal nodes) or virtual (e.g. vCluster) compatible regions.
     parameters:
     - $ref: '#/components/parameters/organizationIDParameter'
     get:
       description: |-
-        Lists a curated set of regions.
+        Lists compute service compatible regions.
       security:
       - oauth2Authentication: []
       responses:
@@ -98,7 +95,7 @@ paths:
     - $ref: '#/components/parameters/projectIDParameter'
     post:
       description: |-
-        Creates a new cluster within the selected cluster manager.
+        Creates a new cluster.
       security:
       - oauth2Authentication: []
       requestBody:
@@ -145,7 +142,7 @@ paths:
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/internalServerErrorResponse'
     delete:
       description: |-
-        Delete a cluster from within a the selected cluster manager.
+        Delete a cluster.
       security:
       - oauth2Authentication: []
       responses:
@@ -167,7 +164,7 @@ components:
       name: organizationID
       in: path
       description: |-
-        The organization name.
+        The organization ID.
       required: true
       schema:
         $ref: '#/components/schemas/kubernetesNameParameter'
@@ -175,14 +172,14 @@ components:
       name: projectID
       in: path
       description: |-
-        The project name.
+        The project ID.
       required: true
       schema:
         $ref: '#/components/schemas/kubernetesNameParameter'
     regionIDParameter:
       name: regionID
       in: path
-      description: The region identifier.
+      description: The region ID.
       required: true
       schema:
         $ref: '#/components/schemas/kubernetesNameParameter'
@@ -190,20 +187,18 @@ components:
       name: clusterID
       in: path
       description: |-
-        The cluster name. Must be a valid DNS containing only lower case characters,
-        numbers or hyphens, start and end with a character or number, and be at most
-        63 characters in length.
+        The cluster ID.
       required: true
       schema:
         $ref: '#/components/schemas/kubernetesNameParameter'
   schemas:
     kubernetesNameParameter:
-      description: A Compute name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
+      description: A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
       type: string
       minLength: 1
       maxLength: 63
     computeClusterNetwork:
-      description: A compute cluster network settings.
+      description: Compute cluster network settings.
       type: object
       properties:
         nodePrefix:
@@ -213,10 +208,10 @@ components:
           description: A list of DNS name server to use.
           type: array
           items:
-            description: A DNS nameserver IPv4 address.
+            description: A DNS name server IPv4 address.
             type: string
     volume:
-      description: A volume.
+      description: A volume.  This is currently only valid for VM based flavors.
       type: object
       required:
       - size
@@ -225,7 +220,7 @@ components:
           description: Disk size in GiB.
           type: integer
     machinePool:
-      description: A Compute cluster machine.
+      description: A Compute cluster machine pool.
       type: object
       required:
       - replicas
@@ -233,8 +228,7 @@ components:
       - image
       properties:
         replicas:
-          description: Number of machines for a statically sized pool or the maximum
-            for an auto-scaled pool.
+          description: Number of machines.
           type: integer
         flavorId:
           description: Flavor ID.
@@ -260,7 +254,9 @@ components:
       items:
         $ref: '#/components/schemas/allowedAddressPair'
     allowedAddressPair:
-      description: Allow multiple MAC/IP address (range) pairs to pass through this network port.
+      description: |-
+        Allow multiple MAC/IP address (range) pairs to pass through this network port.
+        Typically required when the machine is operating as a router.
       type: object
       required:
       - cidr
@@ -602,11 +598,11 @@ components:
                   status: provisioned
   securitySchemes:
     oauth2Authentication:
-      description: Operation requires OAuth2 bearer token authentication.
+      description: Operation requires OAuth 2.0 bearer token authentication.
       type: oauth2
       flows:
         authorizationCode:
-          authorizationUrl: https://identity.unikorn-cloud.org/oauth2/v2/authorization
-          tokenUrl: https://identity.unikorn-cloud.org/oauth2/v2/token
+          authorizationUrl: https://identity.nks.europe-west4.nscale.com/oauth2/v2/authorization
+          tokenUrl: https://identity.nks.europe-west4.nscale.com/oauth2/v2/token
           scopes: {}
 
