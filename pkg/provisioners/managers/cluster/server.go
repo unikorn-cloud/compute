@@ -20,118 +20,88 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"net/http"
 	"slices"
 
 	"github.com/spjmurray/go-util/pkg/set"
 
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
-	computeprovisioners "github.com/unikorn-cloud/compute/pkg/provisioners"
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
-	coreconstants "github.com/unikorn-cloud/core/pkg/constants"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
-	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
+
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (p *Provisioner) reconcileServers(ctx context.Context, client regionapi.ClientWithResponsesInterface, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, servers computeprovisioners.WorkloadPoolProvisionedServerSet, securitygroups computeprovisioners.WorkloadPoolProvisionedSecurityGroupSet, options *computeprovisioners.ClusterOpenstackOptions) error {
-	provisionedServers := servers[pool.Name]
+// serverPoolSet maps the server name to its API resource.
+type serverPoolSet map[string]*regionapi.ServerRead
 
-	create, update, remove := p.serverReconciliationList(provisionedServers, pool)
-
-	for name := range remove.All() {
-		if err := p.deleteServer(ctx, client, provisionedServers[name].Metadata.Id); err != nil {
-			return err
-		}
+// add adds a server to the set and raises an error if one already exists.
+func (s serverPoolSet) add(serverName string, server *regionapi.ServerRead) error {
+	if _, ok := s[serverName]; ok {
+		return fmt.Errorf("%w: server %s for already exists", ErrConsistency, serverName)
 	}
 
-	for name := range update.All() {
-		// TODO: reconcile changes e.g. security groups.
-		p.updateServerStatus(pool, provisionedServers[name])
-	}
-
-	for name := range create.All() {
-		if err := p.createServer(ctx, client, name, *options.ProviderNetwork.NetworkID, pool, securitygroups[pool.Name]); err != nil {
-			return err
-		}
-	}
+	s[serverName] = server
 
 	return nil
 }
 
-func (p *Provisioner) deleteServer(ctx context.Context, client regionapi.ClientWithResponsesInterface, id string) error {
-	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDServersServerIDWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], id)
+// newServerSet returns a new set of servers indexed by pool and by name.
+func (p *Provisioner) newServerSet(ctx context.Context, client regionapi.ClientWithResponsesInterface) (serverPoolSet, error) {
+	log := log.FromContext(ctx)
+
+	servers, err := p.listServers(ctx, client)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Gone already, ignore me!
-	if resp.StatusCode() == http.StatusNotFound {
-		return nil
+	result := serverPoolSet{}
+
+	for i := range servers {
+		server := &servers[i]
+
+		if err := result.add(server.Metadata.Name, server); err != nil {
+			return nil, err
+		}
 	}
 
-	if resp.StatusCode() != http.StatusAccepted {
-		return coreapiutils.ExtractError(resp.StatusCode(), resp)
-	}
+	log.Info("reading existing servers for cluster", "servers", result)
 
-	// TODO: add to the status in a deprovisioning state.
-	return nil
+	return result, nil
 }
 
-func (p *Provisioner) convertStatusCondition(in coreapi.ResourceProvisioningStatus) unikornv1core.ConditionReason {
-	//nolint:exhaustive
-	switch in {
-	case coreapi.ResourceProvisioningStatusProvisioning:
-		p.resourceProvisioning = true
-
-		return unikornv1core.ConditionReasonProvisioning
-	case coreapi.ResourceProvisioningStatusDeprovisioning:
-		p.resourceProvisioning = true
-
-		return unikornv1core.ConditionReasonDeprovisioning
-	case coreapi.ResourceProvisioningStatusProvisioned:
-		return unikornv1core.ConditionReasonProvisioned
-	}
-
-	p.resourceProvisioning = true
-
-	return unikornv1core.ConditionReasonErrored
+func serverName(pool *unikornv1.ComputeClusterWorkloadPoolSpec, replicaIndex int) string {
+	// naive implementation to create a server name based on the pool name and replica index
+	return fmt.Sprintf("%s-%d", pool.Name, replicaIndex)
 }
 
-func (p *Provisioner) updateServerStatus(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, server regionapi.ServerRead) {
-	poolStatus := p.cluster.GetWorkloadPoolStatus(pool.Name)
-	poolStatus.Replicas++
-
-	status := unikornv1.MachineStatus{
-		Hostname:  server.Metadata.Name,
-		PrivateIP: server.Status.PrivateIP,
-		PublicIP:  server.Status.PublicIP,
+// getSecurityGroupForPool returns the security group for a pool.  It assumes the main provisioner
+// has waited until all security groups are ready before proceeding.
+func generateSecurityGroup(pool *unikornv1.ComputeClusterWorkloadPoolSpec, securityGroups securityGroupSet) (*regionapi.ServerSecurityGroupList, error) {
+	if !pool.HasFirewallRules() {
+		//nolint:nilnil
+		return nil, nil
 	}
 
-	// TODO: this is always false, thus confusing!
-	unikornv1core.UpdateCondition(&status.Conditions, unikornv1core.ConditionAvailable, corev1.ConditionFalse, p.convertStatusCondition(server.Metadata.ProvisioningStatus), "server provisioning")
-
-	poolStatus.Machines = append(poolStatus.Machines, status)
-}
-
-// generateSecurityGroups generates security groups for a server request.
-func generateSecurityGroups(securitygroup *regionapi.SecurityGroupRead) *regionapi.ServerSecurityGroupList {
-	if securitygroup == nil {
-		return nil
+	securityGroup, ok := securityGroups[pool.Name]
+	if !ok {
+		return nil, fmt.Errorf("%w: security group for server pool %s not found", ErrConsistency, pool.Name)
 	}
 
-	return &regionapi.ServerSecurityGroupList{
+	result := &regionapi.ServerSecurityGroupList{
 		regionapi.ServerSecurityGroup{
-			Id: securitygroup.Metadata.Id,
+			Id: securityGroup.Metadata.Id,
 		},
 	}
+
+	return result, nil
 }
 
 // generateUserData generates user data for a server request.
-func generateUserData(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *[]byte {
+func generateUserData(pool *unikornv1.ComputeClusterWorkloadPoolSpec) *[]byte {
 	if pool.UserData == nil {
 		return nil
 	}
@@ -140,8 +110,13 @@ func generateUserData(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *[]by
 }
 
 // generateServer generates a server request for creation and updates.
-func (p *Provisioner) generateServer(name, networkID string, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securitygroup *regionapi.SecurityGroupRead) *regionapi.ServerWrite {
-	return &regionapi.ServerWrite{
+func (p *Provisioner) generateServer(name string, openstackIdentityStatus *openstackIdentityStatus, pool *unikornv1.ComputeClusterWorkloadPoolSpec, securityGroups securityGroupSet) (*regionapi.ServerWrite, error) {
+	securityGroup, err := generateSecurityGroup(pool, securityGroups)
+	if err != nil {
+		return nil, err
+	}
+
+	request := &regionapi.ServerWrite{
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        name,
 			Description: ptr.To("Server for cluster " + p.cluster.Name),
@@ -154,112 +129,215 @@ func (p *Provisioner) generateServer(name, networkID string, pool *unikornv1.Com
 			},
 			Networks: regionapi.ServerNetworkList{
 				regionapi.ServerNetwork{
-					Id: networkID,
+					Id: openstackIdentityStatus.NetworkID,
 				},
 			},
 			PublicIPAllocation: &regionapi.ServerPublicIPAllocation{
 				Enabled: pool.PublicIPAllocation != nil && pool.PublicIPAllocation.Enabled,
 			},
-			SecurityGroups: generateSecurityGroups(securitygroup),
+			SecurityGroups: securityGroup,
 			UserData:       generateUserData(pool),
 		},
 	}
+
+	return request, nil
 }
 
-func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientWithResponsesInterface, name, networkID string, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securitygroup *regionapi.SecurityGroupRead) error {
-	request := p.generateServer(name, networkID, pool, securitygroup)
+// serverCreateSet maps server name to it create request.
+type serverCreateSet map[string]*regionapi.ServerWrite
 
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDServersWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], *request)
-	if err != nil {
-		return err
+// add adds a server to the set and raises an error if one already exists.
+func (s serverCreateSet) add(serverName string, server *regionapi.ServerWrite) error {
+	if _, ok := s[serverName]; ok {
+		return fmt.Errorf("%w: server %s for pool already", ErrConsistency, serverName)
 	}
 
-	if resp.StatusCode() != http.StatusCreated {
-		return coreapiutils.ExtractError(resp.StatusCode(), resp)
-	}
-
-	machine := *resp.JSON201
-
-	p.updateServerStatus(pool, machine)
+	s[serverName] = server
 
 	return nil
 }
 
-func serverName(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, replicaIndex int) string {
-	// naive implementation to create a server name based on the pool name and replica index
-	return fmt.Sprintf("%s-%d", pool.Name, replicaIndex)
-}
+// generateServerCreateSet creates a set of all servers that need to exist.
+func (p *Provisioner) generateServerCreateSet(openstackIdentityStatus *openstackIdentityStatus, securityGroups securityGroupSet) (serverCreateSet, error) {
+	out := serverCreateSet{}
 
-// serverReconciliationList compares the provisioned servers with the desired servers and returns the name of the servers to create, reconcile and delete.
-func (p *Provisioner) serverReconciliationList(provisioned computeprovisioners.ProvisionedServerSet, desired *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) (set.Set[string], set.Set[string], set.Set[string]) {
-	// Things that actually exist...
-	actualNames := set.New[string](slices.Collect(maps.Keys(provisioned))...)
+	for i := range p.cluster.Spec.WorkloadPools.Pools {
+		pool := &p.cluster.Spec.WorkloadPools.Pools[i]
 
-	// Things that should exist...
-	desiredNames := set.New[string]()
+		for index := range pool.Replicas {
+			name := serverName(pool, index)
 
-	for i := range desired.Replicas {
-		desiredNames.Add(serverName(desired, i))
+			request, err := p.generateServer(name, openstackIdentityStatus, pool, securityGroups)
+			if err != nil {
+				return nil, err
+			}
+
+			if err := out.add(name, request); err != nil {
+				return nil, err
+			}
+		}
 	}
 
-	return desiredNames.Difference(actualNames), actualNames.Intersection(desiredNames), actualNames.Difference(desiredNames)
+	return out, nil
 }
 
-func (p *Provisioner) getServers(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*regionapi.ServersResponse, error) {
-	response, err := client.GetApiV1OrganizationsOrganizationIDServersWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel])
-	if err != nil {
-		return nil, err
-	}
-
-	if response.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
-	}
-
-	// Filter out servers that aren't from this cluster.
-	result := slices.DeleteFunc(*response.JSON200, func(server regionapi.ServerRead) bool {
-		return p.filterComputeCluster(server.Metadata.Tags)
-	})
-
-	return &result, nil
-}
-
-func (p *Provisioner) filterComputeCluster(tags *coreapi.TagList) bool {
-	if tags == nil {
+// needsRebuild compares the current and requested specifications to determine whether
+// we should do an inplace update of the resource (where supported) or rebuild it from
+// scratch.
+func needsRebuild(current *regionapi.ServerRead, requested *regionapi.ServerWrite) bool {
+	// TODO: flavors can usually be scaled up without losing data but this requires
+	// a shutdown, resize, possible confirmation due to a cold migration, and then
+	// a restart.
+	if current.Spec.FlavorId != requested.Spec.FlavorId {
 		return true
 	}
 
-	index := slices.IndexFunc(*tags, func(tag coreapi.Tag) bool {
-		return tag.Name == coreconstants.ComputeClusterLabel && tag.Value == p.cluster.Name
-	})
-
-	return index < 0
-}
-
-func (p *Provisioner) getProvisionedServerSet(ctx context.Context, client regionapi.ClientWithResponsesInterface) (computeprovisioners.WorkloadPoolProvisionedServerSet, error) {
-	servers, err := p.getServers(ctx, client)
-	if err != nil {
-		return nil, err
+	if current.Spec.Image.Id != requested.Spec.Image.Id {
+		return true
 	}
 
-	result := make(computeprovisioners.WorkloadPoolProvisionedServerSet)
+	// TODO: how to handle user data is as yet unknown.  Theoretically we can just
+	// update it and it'll take effect on a reboot without having to lose data,
+	// which is probably preferable.  Who is in charge of the reboot?  Or the user
+	// may want to blow the machine away and reprovision from scratch.  This probably
+	// needs user interaction eventually.
+	if current.Spec.UserData != requested.Spec.UserData {
+		return true
+	}
 
-	for _, server := range *servers {
-		// find the workload pool tag
-		index := slices.IndexFunc(*server.Metadata.Tags, func(tag coreapi.Tag) bool {
-			return tag.Name == WorkloadPoolLabel
-		})
+	return false
+}
 
-		if index < 0 {
+// scheduleServers compares the provisioned servers with the desired servers and returns the name of the servers to create, reconcile and delete.
+func scheduleServers(current serverPoolSet, requested serverCreateSet) (set.Set[string], set.Set[string], set.Set[string]) {
+	currentNames := set.New[string](slices.Collect(maps.Keys(current))...)
+	requestedNames := set.New[string](slices.Collect(maps.Keys(requested))...)
+
+	return requestedNames.Difference(currentNames), currentNames.Intersection(requestedNames), currentNames.Difference(requestedNames)
+}
+
+// deleteServerWrapper wraps up common server deletion handling as it's called from
+// multiple different places.
+func (p *Provisioner) deleteServerWrapper(ctx context.Context, client regionapi.ClientWithResponsesInterface, servers serverPoolSet, name string) error {
+	log := log.FromContext(ctx)
+
+	server := servers[name]
+
+	log.Info("deleting server", "id", server.Metadata.Id, "name", name)
+
+	if err := p.deleteServer(ctx, client, server.Metadata.Id); err != nil {
+		return err
+	}
+
+	server.Metadata.ProvisioningStatus = coreapi.ResourceProvisioningStatusDeprovisioning
+
+	return nil
+}
+
+// reconcileServers creates/updates/deletes all servers for the cluster.
+func (p *Provisioner) reconcileServers(ctx context.Context, client regionapi.ClientWithResponsesInterface, servers serverPoolSet, securitygroups securityGroupSet, openstackIdentityStatus *openstackIdentityStatus) error {
+	log := log.FromContext(ctx)
+
+	required, err := p.generateServerCreateSet(openstackIdentityStatus, securitygroups)
+	if err != nil {
+		return err
+	}
+
+	create, update, remove := scheduleServers(servers, required)
+
+	// If any servers exist that shouldn't delete them.
+	for name := range remove.All() {
+		if err := p.deleteServerWrapper(ctx, client, servers, name); err != nil {
+			return err
+		}
+	}
+
+	// If any servers have been modified, we need to see if it's something that can
+	// actually be done online or not.  For now we allow changing network options,
+	// everything else needs a rebuild.
+	for name := range update.All() {
+		server := servers[name]
+		request := required[name]
+
+		if needsRebuild(server, request) {
+			if err := p.deleteServerWrapper(ctx, client, servers, name); err != nil {
+				return err
+			}
+
 			continue
 		}
 
-		poolName := (*server.Metadata.Tags)[index].Value
-		if _, exists := result[poolName]; !exists {
-			result[poolName] = make(computeprovisioners.ProvisionedServerSet)
-		}
-
-		result[poolName][server.Metadata.Name] = server
+		// TODO: Create update API call in region controller.
+		log.Info("updating server", "name", name)
 	}
 
-	return result, nil
+	// Create any that we can this time around.
+	for name := range create.All() {
+		log.Info("creating server", "name", name)
+
+		request := required[name]
+
+		server, err := p.createServer(ctx, client, request)
+		if err != nil {
+			return err
+		}
+
+		if err := servers.add(name, server); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// convertStatusCondition converts from an OpenAPI status condition into a Kubernetes one.
+func convertStatusCondition(in coreapi.ResourceProvisioningStatus) (corev1.ConditionStatus, unikornv1core.ConditionReason) {
+	//nolint:exhaustive
+	switch in {
+	case coreapi.ResourceProvisioningStatusProvisioning:
+		return corev1.ConditionFalse, unikornv1core.ConditionReasonProvisioning
+	case coreapi.ResourceProvisioningStatusDeprovisioning:
+		return corev1.ConditionFalse, unikornv1core.ConditionReasonDeprovisioning
+	case coreapi.ResourceProvisioningStatusProvisioned:
+		return corev1.ConditionTrue, unikornv1core.ConditionReasonProvisioned
+	case coreapi.ResourceProvisioningStatusError:
+		return corev1.ConditionFalse, unikornv1core.ConditionReasonErrored
+	}
+
+	return corev1.ConditionFalse, unikornv1core.ConditionReasonUnknown
+}
+
+// updateServerStatus adds a server to the cluster's status.
+// This is called unconditionally after a reconcile to update the current
+// machine status.  It also sets a global flag if any servers are not
+// available so that we can yield and perform any remedial action until
+// everything becomes healthy.
+func (p *Provisioner) updateServerStatus(server *regionapi.ServerRead) error {
+	poolName, err := getWorkloadPoolTag(server.Metadata.Tags)
+	if err != nil {
+		return err
+	}
+
+	poolStatus := p.cluster.GetWorkloadPoolStatus(poolName)
+	poolStatus.Replicas++
+
+	status := unikornv1.MachineStatus{
+		Hostname:  server.Metadata.Name,
+		FlavorID:  server.Spec.FlavorId,
+		ImageID:   server.Spec.Image.Id,
+		PrivateIP: server.Status.PrivateIP,
+		PublicIP:  server.Status.PublicIP,
+	}
+
+	condition, reason := convertStatusCondition(server.Metadata.ProvisioningStatus)
+
+	unikornv1core.UpdateCondition(&status.Conditions, unikornv1core.ConditionAvailable, condition, reason, "server provisioning")
+
+	poolStatus.Machines = append(poolStatus.Machines, status)
+
+	if condition == corev1.ConditionFalse {
+		p.needsRetry = true
+	}
+
+	return nil
 }

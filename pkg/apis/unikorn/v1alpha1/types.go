@@ -22,9 +22,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ComputeWorkloadPoolSpec defines the requested machine pool
+// ComputeClusterWorkloadPoolSpec defines the requested machine pool
 // state.
-type ComputeWorkloadPoolSpec struct {
+type ComputeClusterWorkloadPoolSpec struct {
 	unikornv1core.MachineGeneric `json:",inline"`
 	// Name is the name of the pool.
 	Name string `json:"name"`
@@ -137,15 +137,11 @@ type ComputeClusterSpec struct {
 	WorkloadPools *ComputeClusterWorkloadPoolsSpec `json:"workloadPools"`
 }
 
-type ComputeClusterWorkloadPoolsPoolSpec struct {
-	ComputeWorkloadPoolSpec `json:",inline"`
-}
-
 type ComputeClusterWorkloadPoolsSpec struct {
 	// Pools contains an inline set of pools.  This field will be ignored
 	// when Selector is set.  Inline pools are expected to be used for UI
 	// generated clusters.
-	Pools []ComputeClusterWorkloadPoolsPoolSpec `json:"pools,omitempty"`
+	Pools []ComputeClusterWorkloadPoolSpec `json:"pools,omitempty"`
 }
 
 // ComputeClusterStatus defines the observed state of the Compute cluster.
@@ -172,6 +168,10 @@ type WorkloadPoolStatus struct {
 type MachineStatus struct {
 	// Hostname of the machine.
 	Hostname string `json:"hostname"`
+	// FlavorID is the flavor of the machine.
+	FlavorID string `json:"flavorId"`
+	// ImageID is the image of the machine.
+	ImageID string `json:"imageId"`
 	// PrivateIP is the private IP address.
 	// TODO: should be IPv4Address.
 	PrivateIP *string `json:"privateIp,omitempty"`
