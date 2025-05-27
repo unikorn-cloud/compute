@@ -111,32 +111,37 @@ func (p *Provisioner) updateServerStatus(pool *unikornv1.ComputeClusterWorkloadP
 		PublicIP:  server.Status.PublicIP,
 	}
 
+	// TODO: this is always false, thus confusing!
 	unikornv1core.UpdateCondition(&status.Conditions, unikornv1core.ConditionAvailable, corev1.ConditionFalse, p.convertStatusCondition(server.Metadata.ProvisioningStatus), "server provisioning")
 
 	poolStatus.Machines = append(poolStatus.Machines, status)
 }
 
-func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientWithResponsesInterface, name, networkID string, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securitygroup *regionapi.SecurityGroupRead) error {
-	publicIPAllocationEnabled := false
-	if pool.PublicIPAllocation != nil {
-		publicIPAllocationEnabled = pool.PublicIPAllocation.Enabled
+// generateSecurityGroups generates security groups for a server request.
+func generateSecurityGroups(securitygroup *regionapi.SecurityGroupRead) *regionapi.ServerSecurityGroupList {
+	if securitygroup == nil {
+		return nil
 	}
 
-	var securitygroups *regionapi.ServerSecurityGroupList
-	if securitygroup != nil {
-		securitygroups = &regionapi.ServerSecurityGroupList{
-			regionapi.ServerSecurityGroup{
-				Id: securitygroup.Metadata.Id,
-			},
-		}
+	return &regionapi.ServerSecurityGroupList{
+		regionapi.ServerSecurityGroup{
+			Id: securitygroup.Metadata.Id,
+		},
+	}
+}
+
+// generateUserData generates user data for a server request.
+func generateUserData(pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *[]byte {
+	if pool.UserData == nil {
+		return nil
 	}
 
-	var userdata *[]byte
-	if pool.UserData != nil {
-		userdata = &pool.UserData
-	}
+	return &pool.UserData
+}
 
-	request := regionapi.ServerWrite{
+// generateServer generates a server request for creation and updates.
+func (p *Provisioner) generateServer(name, networkID string, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securitygroup *regionapi.SecurityGroupRead) *regionapi.ServerWrite {
+	return &regionapi.ServerWrite{
 		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        name,
 			Description: ptr.To("Server for cluster " + p.cluster.Name),
@@ -153,14 +158,18 @@ func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientW
 				},
 			},
 			PublicIPAllocation: &regionapi.ServerPublicIPAllocation{
-				Enabled: publicIPAllocationEnabled,
+				Enabled: pool.PublicIPAllocation != nil && pool.PublicIPAllocation.Enabled,
 			},
-			SecurityGroups: securitygroups,
-			UserData:       userdata,
+			SecurityGroups: generateSecurityGroups(securitygroup),
+			UserData:       generateUserData(pool),
 		},
 	}
+}
 
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDServersWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], request)
+func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientWithResponsesInterface, name, networkID string, pool *unikornv1.ComputeClusterWorkloadPoolsPoolSpec, securitygroup *regionapi.SecurityGroupRead) error {
+	request := p.generateServer(name, networkID, pool, securitygroup)
+
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDServersWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], *request)
 	if err != nil {
 		return err
 	}

@@ -401,11 +401,13 @@ func (c *Client) Create(ctx context.Context, organizationID, projectID string, r
 		return nil, err
 	}
 
+	// TODO: allocations should be deleted on error beyond this point!
 	allocation, err := c.createAllocation(ctx, organizationID, projectID, cluster)
 	if err != nil {
 		return nil, errors.OAuth2ServerError("failed to create quota allocation").WithError(err)
 	}
 
+	// TODO: identities should be deleted on error beyond this point!
 	identity, err := c.createIdentity(ctx, organizationID, projectID, request.Spec.RegionId, cluster.Name)
 	if err != nil {
 		return nil, err
@@ -485,6 +487,7 @@ func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterI
 	updated.Annotations = required.Annotations
 	updated.Spec = required.Spec
 
+	// TODO: allocations should be reverted if the patch was rejected.
 	if err := c.updateAllocation(ctx, organizationID, projectID, updated); err != nil {
 		return errors.OAuth2ServerError("failed to update quota allocation").WithError(err)
 	}

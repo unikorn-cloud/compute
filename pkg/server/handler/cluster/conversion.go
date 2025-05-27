@@ -228,9 +228,9 @@ func convertCondition(in unikornv1core.ConditionReason) coreapi.ResourceProvisio
 		return coreapi.ResourceProvisioningStatusProvisioned
 	case unikornv1core.ConditionReasonProvisioning:
 		return coreapi.ResourceProvisioningStatusProvisioning
+	default:
+		return coreapi.ResourceProvisioningStatusUnknown
 	}
-
-	return coreapi.ResourceProvisioningStatusUnknown
 }
 
 func convertMachineStatus(in *unikornv1.MachineStatus) *openapi.ComputeClusterMachineStatus {
