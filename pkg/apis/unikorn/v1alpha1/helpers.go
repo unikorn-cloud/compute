@@ -92,3 +92,21 @@ func (c *ComputeCluster) GetWorkloadPoolStatus(name string) *WorkloadPoolStatus 
 
 	return &c.Status.WorkloadPools[len(c.Status.WorkloadPools)-1]
 }
+
+// GetWorkloadPool looks up a workload pool by name.
+func (c *ComputeCluster) GetWorkloadPool(name string) (*ComputeClusterWorkloadPoolSpec, bool) {
+	for i := range c.Spec.WorkloadPools.Pools {
+		pool := &c.Spec.WorkloadPools.Pools[i]
+
+		if pool.Name == name {
+			return pool, true
+		}
+	}
+
+	return nil, false
+}
+
+// HasFirewallRules tells us if the pool as an firewall rules defined.
+func (p *ComputeClusterWorkloadPoolSpec) HasFirewallRules() bool {
+	return len(p.Firewall) > 0
+}

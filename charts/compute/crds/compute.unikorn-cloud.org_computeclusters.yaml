@@ -264,6 +264,7 @@ spec:
                       - Errored
                       - Deprovisioning
                       - Deprovisioned
+                      - Unknown
                       - Healthy
                       - Degraded
                       type: string
@@ -328,6 +329,7 @@ spec:
                                   - Errored
                                   - Deprovisioning
                                   - Deprovisioned
+                                  - Unknown
                                   - Healthy
                                   - Degraded
                                   type: string
@@ -350,8 +352,14 @@ spec:
                               - type
                               type: object
                             type: array
+                          flavorId:
+                            description: FlavorID is the flavor of the machine,
+                            type: string
                           hostname:
                             description: Hostname of the machine.
+                            type: string
+                          imageId:
+                            description: ImageID is the image of the machine.
                             type: string
                           privateIp:
                             description: PrivateIP is the private IP address.
@@ -360,7 +368,9 @@ spec:
                             description: PublicIP is the public IP address if requested.
                             type: string
                         required:
+                        - flavorId
                         - hostname
+                        - imageId
                         type: object
                       type: array
                     name:
