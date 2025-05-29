@@ -74,7 +74,7 @@ func newGenerator(client client.Client, options *Options, region *region.Client,
 }
 
 // convertMachine converts from a custom resource into the API definition.
-func (g *generator) convertMachine(in *unikornv1.ComputeWorkloadPoolSpec) *openapi.MachinePool {
+func (g *generator) convertMachine(in *unikornv1.ComputeClusterWorkloadPoolSpec) *openapi.MachinePool {
 	return &openapi.MachinePool{
 		Replicas:            in.Replicas,
 		FlavorId:            in.FlavorID,
@@ -104,7 +104,7 @@ func convertAllowedAddressPairs(in []unikornv1.ComputeWorkloadPoolAddressPair) *
 }
 
 // convertImage converts from a custom resource into the API definition.
-func convertImage(in *unikornv1.ComputeWorkloadPoolSpec) openapi.ComputeImage {
+func convertImage(in *unikornv1.ComputeClusterWorkloadPoolSpec) openapi.ComputeImage {
 	if in.ImageSelector == nil {
 		return openapi.ComputeImage{
 			Id: &in.ImageID,
@@ -199,10 +199,10 @@ func convertPublicIPAllocation(in *unikornv1.PublicIPAllocationSpec) *openapi.Pu
 }
 
 // convertWorkloadPool converts from a custom resource into the API definition.
-func (g *generator) convertWorkloadPool(in *unikornv1.ComputeClusterWorkloadPoolsPoolSpec) *openapi.ComputeClusterWorkloadPool {
+func (g *generator) convertWorkloadPool(in *unikornv1.ComputeClusterWorkloadPoolSpec) *openapi.ComputeClusterWorkloadPool {
 	return &openapi.ComputeClusterWorkloadPool{
 		Name:    in.Name,
-		Machine: *g.convertMachine(&in.ComputeWorkloadPoolSpec),
+		Machine: *g.convertMachine(in),
 	}
 }
 
@@ -242,6 +242,8 @@ func convertMachineStatus(in *unikornv1.MachineStatus) *openapi.ComputeClusterMa
 
 	out := &openapi.ComputeClusterMachineStatus{
 		Hostname:  in.Hostname,
+		FlavorID:  in.FlavorID,
+		ImageID:   in.ImageID,
 		PrivateIP: in.PrivateIP,
 		PublicIP:  in.PublicIP,
 		Status:    status,
@@ -437,16 +439,14 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 			return nil, err
 		}
 
-		workloadPool := unikornv1.ComputeClusterWorkloadPoolsPoolSpec{
-			ComputeWorkloadPoolSpec: unikornv1.ComputeWorkloadPoolSpec{
-				Name:                pool.Name,
-				MachineGeneric:      *machine,
-				PublicIPAllocation:  g.generatePublicIPAllocation(pool),
-				Firewall:            firewall,
-				UserData:            g.generateUserData(pool.Machine.UserData),
-				ImageSelector:       g.generateImageSelector(pool.Machine.Image),
-				AllowedAddressPairs: allowedAddressPairs,
-			},
+		workloadPool := unikornv1.ComputeClusterWorkloadPoolSpec{
+			Name:                pool.Name,
+			MachineGeneric:      *machine,
+			PublicIPAllocation:  g.generatePublicIPAllocation(pool),
+			Firewall:            firewall,
+			UserData:            g.generateUserData(pool.Machine.UserData),
+			ImageSelector:       g.generateImageSelector(pool.Machine.Image),
+			AllowedAddressPairs: allowedAddressPairs,
 		}
 
 		workloadPools.Pools = append(workloadPools.Pools, workloadPool)
