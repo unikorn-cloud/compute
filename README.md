@@ -1,28 +1,25 @@
-# Unikorn Compute Service
-
-![Unikorn Logo](https://raw.githubusercontent.com/unikorn-cloud/assets/main/images/logos/light-on-dark/logo.svg#gh-dark-mode-only)
-![Unikorn Logo](https://raw.githubusercontent.com/unikorn-cloud/assets/main/images/logos/dark-on-light/logo.svg#gh-light-mode-only)
+# UNI Compute Service
 
 ## Overview
 
-The compute service is essentially a cut down version of the [Kubernetes service](https://github.com/unikorn-cloud/kubernetes) that provisions its own compute servers using hardware abstraction provided by the [Region service](https://github.com/unikorn-cloud/region).
+The compute service is essentially a cut down version of the [Kubernetes service](https://github.com/nscaledev/uni-kubernetes) that provisions its own compute servers using hardware abstraction provided by the [Region service](https://github.com/nscaledev/uni-region).
 
 Where possible, as the Compute service is very similar to the Kubernetes service, we must maintain type and API parity to ease creation of UX tools and services.
 
 ## Installation
 
-### Unikorn Prerequisites
+### UNI Prerequisites
 
 To use the Compute service you first need to install:
 
-* [The identity service](https://github.com/unikorn-cloud/identity) to provide API authentication and authorization.
-* [The region service](https://github.com/unikorn-cloud/region) to provide provider agnostic cloud services (e.g. images, flavors and identity management).
+* [The identity service](https://github.com/nscaledev/uni-identity) to provide API authentication and authorization.
+* [The region service](https://github.com/nscaledev/uni-region) to provide provider agnostic cloud services (e.g. images, flavors and identity management).
 
 ### Installing the Service
 
 #### Installing Prerequisites
 
-The Unikorn compute server component has a couple prerequisites that are required for correct functionality.
+The UNI compute server component has a couple prerequisites that are required for correct functionality.
 If not installing the server component, skip to the next section.
 
 You'll need to install:
@@ -49,7 +46,7 @@ global:
 ```
 
 ```shell
-helm install unikorn-compute charts/compute --namespace unikorn-compute --create-namespace --values values.yaml
+helm install uni-compute charts/compute --namespace uni-compute --create-namespace --values values.yaml
 ```
 
 </details>
@@ -61,16 +58,16 @@ helm install unikorn-compute charts/compute --namespace unikorn-compute --create
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: unikorn-compute
+  name: uni-compute
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: https://unikorn-cloud.github.io/compute
+    repoURL: https://nscaledev.github.io/compute
     chart: compute
     targetRevision: v0.1.0
   destination:
-    namespace: unikorn
+    namespace: uni-compute
     server: https://kubernetes.default.svc
   syncPolicy:
     automated:
@@ -84,11 +81,11 @@ spec:
 
 ### Configuring Service Authentication and Authorization
 
-The [Unikorn Identity Service](https://github.com/unikorn-cloud/identity) describes how to configure a service organization, groups and role mappings for services that require them.
+The [UNI Identity Service](https://github.com/nscaledev/uni-identity) describes how to configure a service organization, groups and role mappings for services that require them.
 
-This service requires asynchronous access to the Unikorn Region API in order to poll cloud identity and physical network status during cluster creation, and delete those resources on cluster deletion.
+This service requires asynchronous access to the UNI Region API in order to poll cloud identity and physical network status during cluster creation, and delete those resources on cluster deletion.
 
-This service defines the `unikorn-compute` user that will need to be added to a group in the service organization.
+This service defines the `uni-compute` user that will need to be added to a group in the service organization.
 It will need the built in role `infra-manager-service` that allows:
 
 * Read access to the `region` endpoints to access external networks
