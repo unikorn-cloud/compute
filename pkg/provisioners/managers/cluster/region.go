@@ -223,6 +223,20 @@ func (p *Provisioner) createServer(ctx context.Context, client regionapi.ClientW
 	return resp.JSON201, nil
 }
 
+// updateServer updates a server.
+func (p *Provisioner) updateServer(ctx context.Context, client regionapi.ClientWithResponsesInterface, serverID string, request *regionapi.ServerWrite) (*regionapi.ServerResponse, error) {
+	resp, err := client.PutApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDServersServerIDWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], serverID, *request)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode() != http.StatusAccepted {
+		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
+	}
+
+	return resp.JSON202, nil
+}
+
 // deleteServer deletes a server.
 func (p *Provisioner) deleteServer(ctx context.Context, client regionapi.ClientWithResponsesInterface, id string) error {
 	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDServersServerIDWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], id)
