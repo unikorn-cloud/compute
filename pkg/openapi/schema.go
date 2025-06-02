@@ -114,7 +114,7 @@ var swaggerSpec = []string{
 	"0W2uYc6JXF4p2tqCYN2s0LxjcRWLd8Vl1cXZRlR1/2gGmCsd0XcwNi+M1LUMCXs03K/fO/uKRbDy4wee",
 	"eFNvIWUmpoOBqWOVyz69F33IFbH0vV3jPhUhTqAfsnRg8B88jAYNSMoyhyzTa1SSrHDbC7qG0Oj41Y/M",
 	"7VuExqzjLirb93UF/IGEoAs8rVURuieRlHUW9naNlVqKhMSAwmWYwA1NMcVzSIF2tnNLIhOodcbXJm7c",
-	"mjfsD/uBPjEbHfKm3lE/6B+ZoqeFZtgAZ2TwMBzUC5bF4Evz811Pg7Cz8/xVcQmJXahCcA6OgMovyrjh",
+	"mjfsj/qBPjEbHfKm3lE/6B+ZoqeFZtgAZ2TwMBzUC5bF4Evz811Pg7Cz8/xVcQmJXahCcA6OgMovyrjh",
 	"JKncLHWYsZmL+ny6T7wQRv15gTcgzzPycfiujuS7Bopla3zrMz6jIOiyPuW4QdeXNJ58b7zN+/vd7K5n",
 	"GR50FucFsnqeo4POs3pdt55kfNBJVu4TfvK94wOzZd2t03Wrquv13Pb0063+wET9A4AdtX3VkEHXl/c0",
 	"qC1101bhi8GX8kN2uyrsgZD2N77q+Gafvt6BudLCr3SRoEAYUXisX0LUtA6XTGw0D5eWRpfF/A17UXz7",
@@ -123,7 +123,7 @@ var swaggerSpec = []string{
 	"dWffXM0CUe2mDHXkcW3tuTyQcfijt/hvxuabsfkX9AO6g5X6UgftnMckkcAhaocvy/4InbSMSBwDBypL",
 	"rZfLbEO4QCDrGRdWsp4KrQVJd44WvLfLek6wYK/r9//tVPnbQXxFWQZfim+1Pw06i8WL2J3tRNgqeiZM",
 	"+KyICFaqYGep0qG6nW2Ba/f47qMm7+1yfrSLeXGtaX+n55vW/KtpzWZnstCRg6laV11NoWnFtYD7KFq9",
-	"Mufl9OzCrOTF1az1jaNvWvYfomVPT/8fAAD//8VfqW22hgAA",
+	"Mufl9OzCrOTF1az1jaNvWvYfomVPT/8fAAD//0rP4q+2hgAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

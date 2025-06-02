@@ -1,4 +1,4 @@
-# Unikorn Compute Service
+# Compute Service
 
 ![Unikorn Logo](https://raw.githubusercontent.com/unikorn-cloud/assets/main/images/logos/light-on-dark/logo.svg#gh-dark-mode-only)
 ![Unikorn Logo](https://raw.githubusercontent.com/unikorn-cloud/assets/main/images/logos/dark-on-light/logo.svg#gh-light-mode-only)
@@ -11,7 +11,7 @@ Where possible, as the Compute service is very similar to the Kubernetes service
 
 ## Installation
 
-### Unikorn Prerequisites
+### Prerequisites
 
 To use the Compute service you first need to install:
 
@@ -22,7 +22,7 @@ To use the Compute service you first need to install:
 
 #### Installing Prerequisites
 
-The Unikorn compute server component has a couple prerequisites that are required for correct functionality.
+The compute server component has a couple prerequisites that are required for correct functionality.
 If not installing the server component, skip to the next section.
 
 You'll need to install:
@@ -84,9 +84,9 @@ spec:
 
 ### Configuring Service Authentication and Authorization
 
-The [Unikorn Identity Service](https://github.com/unikorn-cloud/identity) describes how to configure a service organization, groups and role mappings for services that require them.
+The [Identity Service](https://github.com/unikorn-cloud/identity) describes how to configure a service organization, groups and role mappings for services that require them.
 
-This service requires asynchronous access to the Unikorn Region API in order to poll cloud identity and physical network status during cluster creation, and delete those resources on cluster deletion.
+This service requires asynchronous access to the Region API in order to poll cloud identity and physical network status during cluster creation, and delete those resources on cluster deletion.
 
 This service defines the `unikorn-compute` user that will need to be added to a group in the service organization.
 It will need the built in role `infra-manager-service` that allows:
