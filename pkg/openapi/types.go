@@ -43,8 +43,14 @@ type AllowedAddressPairList = []AllowedAddressPair
 
 // ComputeClusterMachineStatus Compute cluster machine status.
 type ComputeClusterMachineStatus struct {
+	// FlavorID Machine flavorID.
+	FlavorID string `json:"flavorID"`
+
 	// Hostname Machine hostname.
 	Hostname string `json:"hostname"`
+
+	// ImageID Machine image ID.
+	ImageID string `json:"imageID"`
 
 	// PrivateIP Machine private IP address.
 	PrivateIP *string `json:"privateIP,omitempty"`
