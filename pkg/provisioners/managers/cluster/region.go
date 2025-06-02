@@ -35,23 +35,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// hasClusterTag does a consistency check on returned resources.
-// We assume only one cluster per identity, thus all resources must have
-// the correct cluster tag attached.
-func (p *Provisioner) hasClusterTag(tags *coreapi.TagList) error {
+// hasClusterTag filters resources per cluster, as the API only lists per
+// organization.
+// TODO: scope this correcly.
+func (p *Provisioner) hasClusterTag(tags *coreapi.TagList) (bool, error) {
 	if tags == nil {
-		return fmt.Errorf("%w: resource missing tags", ErrConsistency)
+		return false, fmt.Errorf("%w: resource missing tags", ErrConsistency)
 	}
 
 	check := func(tag coreapi.Tag) bool {
 		return tag.Name == coreconstants.ComputeClusterLabel && tag.Value == p.cluster.Name
 	}
 
-	if !slices.ContainsFunc(*tags, check) {
-		return fmt.Errorf("%w: resource missing cluster tag", ErrConsistency)
-	}
-
-	return nil
+	return slices.ContainsFunc(*tags, check), nil
 }
 
 // hasPoolTag likewise maps a resource to a specific workload pool within a cluster
@@ -197,8 +193,13 @@ func (p *Provisioner) listServers(ctx context.Context, client regionapi.ClientWi
 	for i := range result {
 		tags := result[i].Metadata.Tags
 
-		if err := p.hasClusterTag(tags); err != nil {
+		ok, err := p.hasClusterTag(tags)
+		if err != nil {
 			return nil, err
+		}
+
+		if !ok {
+			continue
 		}
 
 		if err := p.hasPoolTag(tags); err != nil {
@@ -273,8 +274,13 @@ func (p *Provisioner) listSecurityGroups(ctx context.Context, client regionapi.C
 	for i := range result {
 		tags := result[i].Metadata.Tags
 
-		if err := p.hasClusterTag(tags); err != nil {
+		ok, err := p.hasClusterTag(tags)
+		if err != nil {
 			return nil, err
+		}
+
+		if !ok {
+			continue
 		}
 
 		if err := p.hasPoolTag(tags); err != nil {
