@@ -190,17 +190,15 @@ func (p *Provisioner) listServers(ctx context.Context, client regionapi.ClientWi
 
 	result := *response.JSON200
 
+	// Filter out resources that don't belong to this cluster.
+	result = slices.DeleteFunc(result, func(s regionapi.ServerRead) bool {
+		ok, _ := p.hasClusterTag(s.Metadata.Tags)
+
+		return !ok
+	})
+
 	for i := range result {
 		tags := result[i].Metadata.Tags
-
-		ok, err := p.hasClusterTag(tags)
-		if err != nil {
-			return nil, err
-		}
-
-		if !ok {
-			continue
-		}
 
 		if err := p.hasPoolTag(tags); err != nil {
 			return nil, err
@@ -271,17 +269,15 @@ func (p *Provisioner) listSecurityGroups(ctx context.Context, client regionapi.C
 
 	result := *response.JSON200
 
+	// Filter out resources that don't belong to this cluster.
+	result = slices.DeleteFunc(result, func(s regionapi.SecurityGroupRead) bool {
+		ok, _ := p.hasClusterTag(s.Metadata.Tags)
+
+		return !ok
+	})
+
 	for i := range result {
 		tags := result[i].Metadata.Tags
-
-		ok, err := p.hasClusterTag(tags)
-		if err != nil {
-			return nil, err
-		}
-
-		if !ok {
-			continue
-		}
 
 		if err := p.hasPoolTag(tags); err != nil {
 			return nil, err
