@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"reflect"
 	"slices"
 
 	"github.com/spjmurray/go-util/pkg/set"
@@ -122,7 +123,7 @@ func (p *Provisioner) generateServer(name string, openstackIdentityStatus *opens
 			Description: ptr.To("Server for cluster " + p.cluster.Name),
 			Tags:        p.tags(pool),
 		},
-		Spec: regionapi.ServerWriteSpec{
+		Spec: regionapi.ServerSpec{
 			FlavorId: pool.FlavorID,
 			Image: regionapi.ServerImage{
 				Id: pool.ImageID,
@@ -181,6 +182,11 @@ func (p *Provisioner) generateServerCreateSet(openstackIdentityStatus *openstack
 	return out, nil
 }
 
+// needsUpdate compares both specifications and determines whether we need a resource update.
+func needsUpdate(current *regionapi.ServerRead, requested *regionapi.ServerWrite) bool {
+	return !reflect.DeepEqual(current.Spec, requested.Spec)
+}
+
 // needsRebuild compares the current and requested specifications to determine whether
 // we should do an inplace update of the resource (where supported) or rebuild it from
 // scratch.
@@ -235,6 +241,8 @@ func (p *Provisioner) deleteServerWrapper(ctx context.Context, client regionapi.
 }
 
 // reconcileServers creates/updates/deletes all servers for the cluster.
+//
+//nolint:cyclop
 func (p *Provisioner) reconcileServers(ctx context.Context, client regionapi.ClientWithResponsesInterface, servers serverPoolSet, securitygroups securityGroupSet, openstackIdentityStatus *openstackIdentityStatus) error {
 	log := log.FromContext(ctx)
 
@@ -259,16 +267,33 @@ func (p *Provisioner) reconcileServers(ctx context.Context, client regionapi.Cli
 		server := servers[name]
 		request := required[name]
 
+		if !needsUpdate(server, request) {
+			continue
+		}
+
 		if needsRebuild(server, request) {
 			if err := p.deleteServerWrapper(ctx, client, servers, name); err != nil {
 				return err
 			}
 
+			// Ensure we recreate next time around.
+			p.needsRetry = true
+
 			continue
 		}
 
-		// TODO: Create update API call in region controller.
 		log.Info("updating server", "name", name)
+
+		updated, err := p.updateServer(ctx, client, server.Metadata.Id, request)
+		if err != nil {
+			return err
+		}
+
+		servers[name] = updated
+
+		// There is a delay between the API performing the request and the provisioning
+		// status kicking in, so we may miss resource updates.
+		p.needsRetry = true
 	}
 
 	// Create any that we can this time around.
