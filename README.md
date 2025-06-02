@@ -81,17 +81,3 @@ spec:
 ```
 
 </details>
-
-### Configuring Service Authentication and Authorization
-
-The [Unikorn Identity Service](https://github.com/unikorn-cloud/identity) describes how to configure a service organization, groups and role mappings for services that require them.
-
-This service requires asynchronous access to the Unikorn Region API in order to poll cloud identity and physical network status during cluster creation, and delete those resources on cluster deletion.
-
-This service defines the `unikorn-compute` user that will need to be added to a group in the service organization.
-It will need the built in role `infra-manager-service` that allows:
-
-* Read access to the `region` endpoints to access external networks
-* Read/delete access to the `identites` endpoints to poll and delete cloud identities
-* Read/delete access to the `physicalnetworks` endpoints to poll and delete physical networks
-* Create/Read/Delete access to the `servers` endpoints to manage compute instances
