@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"slices"
 
 	"github.com/unikorn-cloud/compute/pkg/constants"
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
@@ -35,37 +34,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// hasClusterTag filters resources per cluster, as the API only lists per
-// organization.
-// TODO: scope this correcly.
-func (p *Provisioner) hasClusterTag(tags *coreapi.TagList) (bool, error) {
-	if tags == nil {
-		return false, fmt.Errorf("%w: resource missing tags", ErrConsistency)
+func (p *Provisioner) clusterTagSelector() *regionapi.TagSelectorParameter {
+	tags := regionapi.TagSelectorParameter{
+		coreconstants.ComputeClusterLabel + "=" + p.cluster.Name,
 	}
 
-	check := func(tag coreapi.Tag) bool {
-		return tag.Name == coreconstants.ComputeClusterLabel && tag.Value == p.cluster.Name
-	}
-
-	return slices.ContainsFunc(*tags, check), nil
-}
-
-// hasPoolTag likewise maps a resource to a specific workload pool within a cluster
-// so we can assert these also exist.
-func (p *Provisioner) hasPoolTag(tags *coreapi.TagList) error {
-	if tags == nil {
-		return fmt.Errorf("%w: resource missing tags", ErrConsistency)
-	}
-
-	check := func(tag coreapi.Tag) bool {
-		return tag.Name == WorkloadPoolLabel
-	}
-
-	if !slices.ContainsFunc(*tags, check) {
-		return fmt.Errorf("%w: resource missing workload pool tag", ErrConsistency)
-	}
-
-	return nil
+	return &tags
 }
 
 // getRegionClient returns an authenticated context with a client credentials access token
@@ -179,7 +153,11 @@ func (p *Provisioner) getNetwork(ctx context.Context, client regionapi.ClientWit
 
 // listServers lists all servers that are part of this cluster.
 func (p *Provisioner) listServers(ctx context.Context, client regionapi.ClientWithResponsesInterface) (regionapi.ServersResponse, error) {
-	response, err := client.GetApiV1OrganizationsOrganizationIDServersWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel])
+	params := &regionapi.GetApiV1OrganizationsOrganizationIDServersParams{
+		Tag: p.clusterTagSelector(),
+	}
+
+	response, err := client.GetApiV1OrganizationsOrganizationIDServersWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], params)
 	if err != nil {
 		return nil, err
 	}
@@ -188,24 +166,7 @@ func (p *Provisioner) listServers(ctx context.Context, client regionapi.ClientWi
 		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
 	}
 
-	result := *response.JSON200
-
-	// Filter out resources that don't belong to this cluster.
-	result = slices.DeleteFunc(result, func(s regionapi.ServerRead) bool {
-		ok, _ := p.hasClusterTag(s.Metadata.Tags)
-
-		return !ok
-	})
-
-	for i := range result {
-		tags := result[i].Metadata.Tags
-
-		if err := p.hasPoolTag(tags); err != nil {
-			return nil, err
-		}
-	}
-
-	return result, nil
+	return *response.JSON200, nil
 }
 
 // createServer creates a new server.
@@ -258,7 +219,11 @@ func (p *Provisioner) deleteServer(ctx context.Context, client regionapi.ClientW
 
 // listSecurityGroups reads all security groups for the cluster.
 func (p *Provisioner) listSecurityGroups(ctx context.Context, client regionapi.ClientWithResponsesInterface) (regionapi.SecurityGroupsResponse, error) {
-	response, err := client.GetApiV1OrganizationsOrganizationIDSecuritygroupsWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel])
+	params := &regionapi.GetApiV1OrganizationsOrganizationIDSecuritygroupsParams{
+		Tag: p.clusterTagSelector(),
+	}
+
+	response, err := client.GetApiV1OrganizationsOrganizationIDSecuritygroupsWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], params)
 	if err != nil {
 		return nil, err
 	}
@@ -267,24 +232,7 @@ func (p *Provisioner) listSecurityGroups(ctx context.Context, client regionapi.C
 		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
 	}
 
-	result := *response.JSON200
-
-	// Filter out resources that don't belong to this cluster.
-	result = slices.DeleteFunc(result, func(s regionapi.SecurityGroupRead) bool {
-		ok, _ := p.hasClusterTag(s.Metadata.Tags)
-
-		return !ok
-	})
-
-	for i := range result {
-		tags := result[i].Metadata.Tags
-
-		if err := p.hasPoolTag(tags); err != nil {
-			return nil, err
-		}
-	}
-
-	return result, nil
+	return *response.JSON200, nil
 }
 
 // createSecurityGroup creates a security group.
