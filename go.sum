@@ -143,8 +143,8 @@ github.com/unikorn-cloud/core v1.2.1-0.20250603100447-a7ef1ff8d333 h1:WDQGl8KtQe
 github.com/unikorn-cloud/core v1.2.1-0.20250603100447-a7ef1ff8d333/go.mod h1:w+knncdBlLfVg82Ky3BejohUqiXrCUPFnAup1yZYbyM=
 github.com/unikorn-cloud/identity v1.2.0 h1:Hbokk7UqRWEF1mIhggg35tUApopcM8y5FQ1wPoUcBv0=
 github.com/unikorn-cloud/identity v1.2.0/go.mod h1:iylaGCOKPMLFkmySLDqswkJlPGp+QQQABDphMIVaaFQ=
-github.com/unikorn-cloud/region v1.2.1-0.20250603103003-bc4b36ca3417 h1:P0yLdch9mGmL6tuxyWvWo7DbF6w2GM6LviOzH78RRZo=
-github.com/unikorn-cloud/region v1.2.1-0.20250603103003-bc4b36ca3417/go.mod h1:OAJBDKbqS1WJXvYzpimYD871Ybwa8+oEnTC6U527CYM=
+github.com/unikorn-cloud/region v1.2.1-0.20250604144048-e7019c94bbf6 h1:pZrhfKjavOU2iCFLr05tgGqG/w5blZKU0MqonSG/GpA=
+github.com/unikorn-cloud/region v1.2.1-0.20250604144048-e7019c94bbf6/go.mod h1:OAJBDKbqS1WJXvYzpimYD871Ybwa8+oEnTC6U527CYM=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
