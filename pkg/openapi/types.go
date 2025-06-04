@@ -46,6 +46,9 @@ type ComputeClusterMachineStatus struct {
 	// FlavorID Machine flavorID.
 	FlavorID string `json:"flavorID"`
 
+	// HealthStatus The health state of a resource.
+	HealthStatus externalRef0.ResourceHealthStatus `json:"healthStatus"`
+
 	// Hostname Machine hostname.
 	Hostname string `json:"hostname"`
 
@@ -55,11 +58,11 @@ type ComputeClusterMachineStatus struct {
 	// PrivateIP Machine private IP address.
 	PrivateIP *string `json:"privateIP,omitempty"`
 
+	// ProvisioningStatus The provisioning state of a resource.
+	ProvisioningStatus externalRef0.ResourceProvisioningStatus `json:"provisioningStatus"`
+
 	// PublicIP Machine public IP address.
 	PublicIP *string `json:"publicIP,omitempty"`
-
-	// Status The provisioning state of a resource.
-	Status externalRef0.ResourceProvisioningStatus `json:"status"`
 }
 
 // ComputeClusterMachinesStatus A list of Compute cluster machines status.
