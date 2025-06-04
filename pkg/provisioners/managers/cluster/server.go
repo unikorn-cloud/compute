@@ -125,9 +125,7 @@ func (p *Provisioner) generateServer(name string, openstackIdentityStatus *opens
 		},
 		Spec: regionapi.ServerSpec{
 			FlavorId: pool.FlavorID,
-			Image: regionapi.ServerImage{
-				Id: pool.ImageID,
-			},
+			ImageId:  pool.ImageID,
 			Networks: regionapi.ServerNetworkList{
 				regionapi.ServerNetwork{
 					Id: openstackIdentityStatus.NetworkID,
@@ -198,7 +196,7 @@ func needsRebuild(current *regionapi.ServerRead, requested *regionapi.ServerWrit
 		return true
 	}
 
-	if current.Spec.Image.Id != requested.Spec.Image.Id {
+	if current.Spec.ImageId != requested.Spec.ImageId {
 		return true
 	}
 
@@ -349,7 +347,7 @@ func (p *Provisioner) updateServerStatus(server *regionapi.ServerRead) error {
 	status := unikornv1.MachineStatus{
 		Hostname:  server.Metadata.Name,
 		FlavorID:  server.Spec.FlavorId,
-		ImageID:   server.Spec.Image.Id,
+		ImageID:   server.Spec.ImageId,
 		PrivateIP: server.Status.PrivateIP,
 		PublicIP:  server.Status.PublicIP,
 	}
