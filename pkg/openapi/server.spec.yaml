@@ -414,7 +414,8 @@ components:
       type: object
       required:
       - hostname
-      - status
+      - provisioningStatus
+      - healthStatus
       - imageID
       - flavorID
       properties:
@@ -433,8 +434,10 @@ components:
         publicIP:
           description: Machine public IP address.
           type: string
-        status:
+        provisioningStatus:
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/schemas/resourceProvisioningStatus'
+        healthStatus:
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/schemas/resourceHealthStatus'
     computeClusterRead:
       description: Compute cluster read.
       type: object
@@ -555,7 +558,8 @@ components:
                   imageID: 268ba68f-9690-49f0-8404-5f41bb7c3dc3
                   privateIP: 10.0.0.1
                   publicIP: 172.16.0.2
-                  status: provisioned
+                  provisioningStatus: provisioned
+                  healthStatus: healthy
     computeClustersResponse:
       description: A list of Compute clusters.
       content:
@@ -607,7 +611,8 @@ components:
                   imageID: 268ba68f-9690-49f0-8404-5f41bb7c3dc3
                   privateIP: 10.0.0.1
                   publicIP: 172.16.0.2
-                  status: provisioned
+                  provisioningStatus: provisioned
+                  healthStatus: healthy
   securitySchemes:
     oauth2Authentication:
       description: Operation requires OAuth 2.0 bearer token authentication.

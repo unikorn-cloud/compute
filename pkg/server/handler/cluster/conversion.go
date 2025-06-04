@@ -217,8 +217,8 @@ func (g *generator) convertWorkloadPools(in *unikornv1.ComputeCluster) []openapi
 	return workloadPools
 }
 
-func convertCondition(in unikornv1core.ConditionReason) coreapi.ResourceProvisioningStatus {
-	//nolint:exhaustive
+//nolint:exhaustive
+func convertProvisioningStatus(in unikornv1core.ConditionReason) coreapi.ResourceProvisioningStatus {
 	switch in {
 	case unikornv1core.ConditionReasonDeprovisioning:
 		return coreapi.ResourceProvisioningStatusDeprovisioning
@@ -233,20 +233,39 @@ func convertCondition(in unikornv1core.ConditionReason) coreapi.ResourceProvisio
 	}
 }
 
+//nolint:exhaustive
+func convertHealthStatus(in unikornv1core.ConditionReason) coreapi.ResourceHealthStatus {
+	switch in {
+	case unikornv1core.ConditionReasonHealthy:
+		return coreapi.ResourceHealthStatusHealthy
+	case unikornv1core.ConditionReasonDegraded:
+		return coreapi.ResourceHealthStatusDegraded
+	default:
+		return coreapi.ResourceHealthStatusUnknown
+	}
+}
+
 func convertMachineStatus(in *unikornv1.MachineStatus) *openapi.ComputeClusterMachineStatus {
-	status := coreapi.ResourceProvisioningStatusUnknown
+	provisioningStatus := coreapi.ResourceProvisioningStatusUnknown
 
 	if condition, err := unikornv1core.GetCondition(in.Conditions, unikornv1core.ConditionAvailable); err == nil {
-		status = convertCondition(condition.Reason)
+		provisioningStatus = convertProvisioningStatus(condition.Reason)
+	}
+
+	healthStatus := coreapi.ResourceHealthStatusUnknown
+
+	if condition, err := unikornv1core.GetCondition(in.Conditions, unikornv1core.ConditionHealthy); err == nil {
+		healthStatus = convertHealthStatus(condition.Reason)
 	}
 
 	out := &openapi.ComputeClusterMachineStatus{
-		Hostname:  in.Hostname,
-		FlavorID:  in.FlavorID,
-		ImageID:   in.ImageID,
-		PrivateIP: in.PrivateIP,
-		PublicIP:  in.PublicIP,
-		Status:    status,
+		Hostname:           in.Hostname,
+		FlavorID:           in.FlavorID,
+		ImageID:            in.ImageID,
+		PrivateIP:          in.PrivateIP,
+		PublicIP:           in.PublicIP,
+		ProvisioningStatus: provisioningStatus,
+		HealthStatus:       healthStatus,
 	}
 
 	return out

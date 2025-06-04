@@ -313,8 +313,8 @@ func (p *Provisioner) reconcileServers(ctx context.Context, client regionapi.Cli
 	return nil
 }
 
-// convertStatusCondition converts from an OpenAPI status condition into a Kubernetes one.
-func convertStatusCondition(in coreapi.ResourceProvisioningStatus) (corev1.ConditionStatus, unikornv1core.ConditionReason) {
+// convertProvisioningStatusCondition converts from an OpenAPI status condition into a Kubernetes one.
+func convertProvisioningStatusCondition(in coreapi.ResourceProvisioningStatus) (corev1.ConditionStatus, unikornv1core.ConditionReason) {
 	//nolint:exhaustive
 	switch in {
 	case coreapi.ResourceProvisioningStatusProvisioning:
@@ -325,6 +325,19 @@ func convertStatusCondition(in coreapi.ResourceProvisioningStatus) (corev1.Condi
 		return corev1.ConditionTrue, unikornv1core.ConditionReasonProvisioned
 	case coreapi.ResourceProvisioningStatusError:
 		return corev1.ConditionFalse, unikornv1core.ConditionReasonErrored
+	}
+
+	return corev1.ConditionFalse, unikornv1core.ConditionReasonUnknown
+}
+
+// convertHealthStatusCondition converts from an OpenAPI status condition into a Kubernetes one.
+func convertHealthStatusCondition(in coreapi.ResourceHealthStatus) (corev1.ConditionStatus, unikornv1core.ConditionReason) {
+	//nolint:exhaustive
+	switch in {
+	case coreapi.ResourceHealthStatusHealthy:
+		return corev1.ConditionTrue, unikornv1core.ConditionReasonHealthy
+	case coreapi.ResourceHealthStatusDegraded:
+		return corev1.ConditionFalse, unikornv1core.ConditionReasonDegraded
 	}
 
 	return corev1.ConditionFalse, unikornv1core.ConditionReasonUnknown
@@ -352,13 +365,15 @@ func (p *Provisioner) updateServerStatus(server *regionapi.ServerRead) error {
 		PublicIP:  server.Status.PublicIP,
 	}
 
-	condition, reason := convertStatusCondition(server.Metadata.ProvisioningStatus)
+	provisioningStatus, provisioningReason := convertProvisioningStatusCondition(server.Metadata.ProvisioningStatus)
+	healthStatus, healthReason := convertHealthStatusCondition(server.Metadata.HealthStatus)
 
-	unikornv1core.UpdateCondition(&status.Conditions, unikornv1core.ConditionAvailable, condition, reason, "server provisioning")
+	unikornv1core.UpdateCondition(&status.Conditions, unikornv1core.ConditionAvailable, provisioningStatus, provisioningReason, "server provisioning")
+	unikornv1core.UpdateCondition(&status.Conditions, unikornv1core.ConditionHealthy, healthStatus, healthReason, "server provisioning")
 
 	poolStatus.Machines = append(poolStatus.Machines, status)
 
-	if condition == corev1.ConditionFalse {
+	if provisioningStatus == corev1.ConditionFalse {
 		p.needsRetry = true
 	}
 
