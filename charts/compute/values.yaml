@@ -18,20 +18,31 @@ imagePullSecret: ~
 clusterController:
   # Allows override of the global default image.
   image:
+  # Allows resource limits to be set.
+  resources:
+    limits:
+      cpu: 100m
+      memory: 100Mi
 
 # Monitor specific configuration.
 monitor:
   # Allows override of the global default image.
   image:
-
-# Sets the DNS hosts/X.509 Certs.
-compute:
-  host: compute.unikorn-cloud.org
+  # Allows resource limits to be set.
+  resources:
+    limits:
+      cpu: 100m
+      memory: 100Mi
 
 # REST server specific configuration.
 server:
   # Allows override of the global default image.
   image:
+  # Allows resource limits to be set.
+  resources:
+    limits:
+      cpu: 100m
+      memory: 100Mi
 
 ingress:
   # Sets the ingress class to use.
@@ -54,6 +65,10 @@ ingress:
 # ca:
 #   secretNamespace: ~
 #   secretName: ~
+
+# Sets the DNS hosts/X.509 Certs.
+compute:
+  host: compute.unikorn-cloud.org
 
 identity:
   # OIDC issuer used to discover OIDC configuration and verify access tokens.
