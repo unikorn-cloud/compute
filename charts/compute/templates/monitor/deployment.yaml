@@ -17,6 +17,10 @@ spec:
       containers:
       - name: {{ .Release.Name }}-monitor
         image: {{ include "unikorn.computeMonitorImage" . }}
+        args:
+        {{- include "unikorn.identity.flags" . | nindent 8 }}
+        {{- include "unikorn.region.flags" . | nindent 8 }}
+        {{- include "unikorn.mtls.flags" . | nindent 8 }}
         resources:
           requests:
             cpu: 50m

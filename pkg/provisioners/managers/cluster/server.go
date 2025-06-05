@@ -26,11 +26,9 @@ import (
 	"github.com/spjmurray/go-util/pkg/set"
 
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
-	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -51,13 +49,8 @@ func (s serverPoolSet) add(serverName string, server *regionapi.ServerRead) erro
 }
 
 // newServerSet returns a new set of servers indexed by pool and by name.
-func (p *Provisioner) newServerSet(ctx context.Context, client regionapi.ClientWithResponsesInterface) (serverPoolSet, error) {
+func (p *Provisioner) newServerSet(ctx context.Context, servers regionapi.ServersRead) (serverPoolSet, error) {
 	log := log.FromContext(ctx)
-
-	servers, err := p.listServers(ctx, client)
-	if err != nil {
-		return nil, err
-	}
 
 	result := serverPoolSet{}
 
@@ -308,73 +301,6 @@ func (p *Provisioner) reconcileServers(ctx context.Context, client regionapi.Cli
 		if err := servers.add(name, server); err != nil {
 			return err
 		}
-	}
-
-	return nil
-}
-
-// convertProvisioningStatusCondition converts from an OpenAPI status condition into a Kubernetes one.
-func convertProvisioningStatusCondition(in coreapi.ResourceProvisioningStatus) (corev1.ConditionStatus, unikornv1core.ConditionReason) {
-	//nolint:exhaustive
-	switch in {
-	case coreapi.ResourceProvisioningStatusProvisioning:
-		return corev1.ConditionFalse, unikornv1core.ConditionReasonProvisioning
-	case coreapi.ResourceProvisioningStatusDeprovisioning:
-		return corev1.ConditionFalse, unikornv1core.ConditionReasonDeprovisioning
-	case coreapi.ResourceProvisioningStatusProvisioned:
-		return corev1.ConditionTrue, unikornv1core.ConditionReasonProvisioned
-	case coreapi.ResourceProvisioningStatusError:
-		return corev1.ConditionFalse, unikornv1core.ConditionReasonErrored
-	}
-
-	return corev1.ConditionFalse, unikornv1core.ConditionReasonUnknown
-}
-
-// convertHealthStatusCondition converts from an OpenAPI status condition into a Kubernetes one.
-func convertHealthStatusCondition(in coreapi.ResourceHealthStatus) (corev1.ConditionStatus, unikornv1core.ConditionReason) {
-	//nolint:exhaustive
-	switch in {
-	case coreapi.ResourceHealthStatusHealthy:
-		return corev1.ConditionTrue, unikornv1core.ConditionReasonHealthy
-	case coreapi.ResourceHealthStatusDegraded:
-		return corev1.ConditionFalse, unikornv1core.ConditionReasonDegraded
-	}
-
-	return corev1.ConditionFalse, unikornv1core.ConditionReasonUnknown
-}
-
-// updateServerStatus adds a server to the cluster's status.
-// This is called unconditionally after a reconcile to update the current
-// machine status.  It also sets a global flag if any servers are not
-// available so that we can yield and perform any remedial action until
-// everything becomes healthy.
-func (p *Provisioner) updateServerStatus(server *regionapi.ServerRead) error {
-	poolName, err := getWorkloadPoolTag(server.Metadata.Tags)
-	if err != nil {
-		return err
-	}
-
-	poolStatus := p.cluster.GetWorkloadPoolStatus(poolName)
-	poolStatus.Replicas++
-
-	status := unikornv1.MachineStatus{
-		Hostname:  server.Metadata.Name,
-		FlavorID:  server.Spec.FlavorId,
-		ImageID:   server.Spec.ImageId,
-		PrivateIP: server.Status.PrivateIP,
-		PublicIP:  server.Status.PublicIP,
-	}
-
-	provisioningStatus, provisioningReason := convertProvisioningStatusCondition(server.Metadata.ProvisioningStatus)
-	healthStatus, healthReason := convertHealthStatusCondition(server.Metadata.HealthStatus)
-
-	unikornv1core.UpdateCondition(&status.Conditions, unikornv1core.ConditionAvailable, provisioningStatus, provisioningReason, "server provisioning")
-	unikornv1core.UpdateCondition(&status.Conditions, unikornv1core.ConditionHealthy, healthStatus, healthReason, "server provisioning")
-
-	poolStatus.Machines = append(poolStatus.Machines, status)
-
-	if provisioningStatus == corev1.ConditionFalse {
-		p.needsRetry = true
 	}
 
 	return nil

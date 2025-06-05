@@ -7,22 +7,17 @@ metadata:
 rules:
 # Manage kubernetes clusters and control planes (my job).
 - apiGroups:
-  - region.unikorn-cloud.org
+  - compute.unikorn-cloud.org
   resources:
-  - regions
-  - servers
-  - networks
-  - openstackservers
-  - openstacknetworks
+  - computeclusters
   verbs:
   - list
   - watch
 # Update status conditions
 - apiGroups:
-  - region.unikorn-cloud.org
+  - compute.unikorn-cloud.org
   resources:
-  - servers/status
-  - networks/status
+  - computeclusters/status
   verbs:
   - patch
 # Get region credentials.

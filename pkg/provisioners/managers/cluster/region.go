@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	"github.com/unikorn-cloud/compute/pkg/constants"
+	"github.com/unikorn-cloud/compute/pkg/provisioners/managers/cluster/util"
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
 	coreconstants "github.com/unikorn-cloud/core/pkg/constants"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
@@ -34,17 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (p *Provisioner) clusterTagSelector() *regionapi.TagSelectorParameter {
-	tags := regionapi.TagSelectorParameter{
-		coreconstants.ComputeClusterLabel + "=" + p.cluster.Name,
-	}
-
-	return &tags
-}
-
-// getRegionClient returns an authenticated context with a client credentials access token
-// and a client.  The context must be used by subsequent API calls in order to extract
-// the access token.
+// getRegionClient returns an authenticated client.
 // TODO: the client should be cached for an appropriate period to avoid polluting the
 // caches in identity with new tokens during busy periods.
 func (p *Provisioner) getRegionClient(ctx context.Context, traceName string) (regionapi.ClientWithResponsesInterface, error) {
@@ -154,7 +145,7 @@ func (p *Provisioner) getNetwork(ctx context.Context, client regionapi.ClientWit
 // listServers lists all servers that are part of this cluster.
 func (p *Provisioner) listServers(ctx context.Context, client regionapi.ClientWithResponsesInterface) (regionapi.ServersResponse, error) {
 	params := &regionapi.GetApiV1OrganizationsOrganizationIDServersParams{
-		Tag: p.clusterTagSelector(),
+		Tag: util.ClusterTagSelector(&p.cluster),
 	}
 
 	response, err := client.GetApiV1OrganizationsOrganizationIDServersWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], params)
@@ -220,7 +211,7 @@ func (p *Provisioner) deleteServer(ctx context.Context, client regionapi.ClientW
 // listSecurityGroups reads all security groups for the cluster.
 func (p *Provisioner) listSecurityGroups(ctx context.Context, client regionapi.ClientWithResponsesInterface) (regionapi.SecurityGroupsResponse, error) {
 	params := &regionapi.GetApiV1OrganizationsOrganizationIDSecuritygroupsParams{
-		Tag: p.clusterTagSelector(),
+		Tag: util.ClusterTagSelector(&p.cluster),
 	}
 
 	response, err := client.GetApiV1OrganizationsOrganizationIDSecuritygroupsWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], params)
