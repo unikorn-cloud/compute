@@ -12,10 +12,7 @@ rules:
   - computeclusters
   verbs:
   - list
-  - get
-  - patch
   - watch
-  - update
 - apiGroups:
   - compute.unikorn-cloud.org
   resources:
@@ -29,18 +26,6 @@ rules:
   verbs:
   - list
   - watch
-# ArgoCD integration.
-- apiGroups:
-  - argoproj.io
-  resources:
-  - applications
-  verbs:
-  - create
-  - list
-  - get
-  - watch
-  - patch
-  - delete
 # ArgoCD integration (access to API secret).
 - apiGroups:
   - ""

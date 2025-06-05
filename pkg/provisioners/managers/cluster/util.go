@@ -17,10 +17,10 @@ limitations under the License.
 package cluster
 
 import (
-	"fmt"
 	"slices"
 
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
+	"github.com/unikorn-cloud/compute/pkg/provisioners/managers/cluster/util"
 	coreconstants "github.com/unikorn-cloud/core/pkg/constants"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 )
@@ -30,7 +30,7 @@ import (
 func (p *Provisioner) tags(pool *unikornv1.ComputeClusterWorkloadPoolSpec) *coreapi.TagList {
 	out := coreapi.TagList{
 		{Name: coreconstants.ComputeClusterLabel, Value: p.cluster.Name},
-		{Name: WorkloadPoolLabel, Value: pool.Name},
+		{Name: util.WorkloadPoolLabel, Value: pool.Name},
 	}
 
 	// Propagate any additional tags from the cluster's spec, if present
@@ -49,24 +49,4 @@ func (p *Provisioner) tags(pool *unikornv1.ComputeClusterWorkloadPoolSpec) *core
 	}
 
 	return &out
-}
-
-// getWorkloadPoolTag derives the pool from the API resource.
-func getWorkloadPoolTag(tags *coreapi.TagList) (string, error) {
-	if tags == nil {
-		return "", fmt.Errorf("%w: workload pool tags missing", ErrConsistency)
-	}
-
-	t := *tags
-
-	isWorkloadPoolTag := func(tag coreapi.Tag) bool {
-		return tag.Name == WorkloadPoolLabel
-	}
-
-	index := slices.IndexFunc(t, isWorkloadPoolTag)
-	if index < 0 {
-		return "", fmt.Errorf("%w: workload pool tag missing", ErrConsistency)
-	}
-
-	return t[index].Value, nil
 }

@@ -19,12 +19,13 @@ package cluster
 import (
 	"context"
 	"errors"
+	"maps"
 	"slices"
-	"strings"
 
 	"github.com/spf13/pflag"
 
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
+	"github.com/unikorn-cloud/compute/pkg/provisioners/managers/cluster/util"
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
 	"github.com/unikorn-cloud/core/pkg/manager"
@@ -131,29 +132,28 @@ func (p *Provisioner) getOpenstackIdentityStatus(ctx context.Context, client reg
 }
 
 // updateStatus updates the compute cluster status.
-func (p *Provisioner) updateStatus(ctx context.Context, servers serverPoolSet, options *openstackIdentityStatus) {
+func (p *Provisioner) updateStatus(ctx context.Context, serverSet serverPoolSet, options *openstackIdentityStatus) {
 	log := log.FromContext(ctx)
 
-	p.cluster.Status = unikornv1.ComputeClusterStatus{
-		SSHPrivateKey: options.SSHPrivateKey,
+	// NOTE: the shared update function expects a list, but we use a map
+	// indexed by hostname, which also gets updated as we add servers, so
+	// we need to do the conversion here.  This is purely a UX optimization,
+	// we could instead trigger a retry on server addition.
+	servers := make([]regionapi.ServerRead, len(serverSet))
+
+	for i, s := range slices.Collect(maps.Values(serverSet)) {
+		servers[i] = *s
 	}
 
-	for i := range servers {
-		if err := p.updateServerStatus(servers[i]); err != nil {
-			log.Error(err, "status update error", "server", servers[i].Metadata.Name)
-		}
+	p.cluster.Status.SSHPrivateKey = options.SSHPrivateKey
+
+	ok, err := util.UpdateClusterStatus(&p.cluster, servers)
+	if err != nil {
+		log.Error(err, "status update error", "cluster", p.cluster.Name)
 	}
 
-	// Sort the statuses so they have a deterministic order up the stack, especially
-	// to things like the UI.
-	slices.SortFunc(p.cluster.Status.WorkloadPools, func(a, b unikornv1.WorkloadPoolStatus) int {
-		return strings.Compare(a.Name, b.Name)
-	})
-
-	for _, pool := range p.cluster.Status.WorkloadPools {
-		slices.SortFunc(pool.Machines, func(a, b unikornv1.MachineStatus) int {
-			return strings.Compare(a.Hostname, b.Hostname)
-		})
+	if !ok {
+		p.needsRetry = true
 	}
 }
 
@@ -172,30 +172,30 @@ func (p *Provisioner) provision(ctx context.Context) error {
 		return err
 	}
 
-	servers, err := p.newServerSet(ctx, client)
+	servers, err := p.listServers(ctx, client)
+	if err != nil {
+		return err
+	}
+
+	serverSet, err := p.newServerSet(ctx, servers)
 	if err != nil {
 		return err
 	}
 
 	// The server set will update as we reconcile, ensure we update the status
 	// regardless of what happened.
-	defer p.updateStatus(ctx, servers, openstackIndentityStatus)
+	defer p.updateStatus(ctx, serverSet, openstackIndentityStatus)
 
 	securityGroups, err := p.newSecurityGroupSet(ctx, client)
 	if err != nil {
 		return err
 	}
 
-	// Reset the status it'll get updated as we go along...
-	p.cluster.Status = unikornv1.ComputeClusterStatus{
-		SSHPrivateKey: openstackIndentityStatus.SSHPrivateKey,
-	}
-
 	if err := p.reconcileSecurityGroups(ctx, client, securityGroups); err != nil {
 		return err
 	}
 
-	if err := p.reconcileServers(ctx, client, servers, securityGroups, openstackIndentityStatus); err != nil {
+	if err := p.reconcileServers(ctx, client, serverSet, securityGroups, openstackIndentityStatus); err != nil {
 		return err
 	}
 

@@ -22,6 +22,11 @@ import (
 
 	"github.com/spf13/pflag"
 
+	clusterhealth "github.com/unikorn-cloud/compute/pkg/monitor/health/cluster"
+	coreclient "github.com/unikorn-cloud/core/pkg/client"
+	identityclient "github.com/unikorn-cloud/identity/pkg/client"
+	regionclient "github.com/unikorn-cloud/region/pkg/client"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -32,11 +37,27 @@ type Options struct {
 	// run with high frequency, reads are all cached.  It's mostly down to
 	// burning CPU unnecessarily.
 	pollPeriod time.Duration
+	// identityOptions allow the identity host and CA to be set.
+	identityOptions *identityclient.Options
+	// regionOptions allows the region host and CA to be set.
+	regionOptions *regionclient.Options
+	// clientOptions give access to client certificate information as
+	// we need to talk to identity to get a token, and then to region
+	// to ensure cloud identities and networks are provisioned, as well
+	// as deptovisioning them.
+	clientOptions coreclient.HTTPClientOptions
 }
 
 // AddFlags registers option flags with pflag.
-func (o *Options) AddFlags(flags *pflag.FlagSet) {
-	flags.DurationVar(&o.pollPeriod, "poll-period", time.Minute, "Period to poll for updates")
+func (o *Options) AddFlags(f *pflag.FlagSet) {
+	o.identityOptions = identityclient.NewOptions()
+	o.regionOptions = regionclient.NewOptions()
+
+	o.identityOptions.AddFlags(f)
+	o.regionOptions.AddFlags(f)
+	o.clientOptions.AddFlags(f)
+
+	f.DurationVar(&o.pollPeriod, "poll-period", time.Minute, "Period to poll for updates")
 }
 
 // Checker is an interface that monitors must implement.
@@ -52,7 +73,9 @@ func Run(ctx context.Context, c client.Client, o *Options) {
 	ticker := time.NewTicker(o.pollPeriod)
 	defer ticker.Stop()
 
-	checkers := []Checker{}
+	checkers := []Checker{
+		clusterhealth.New(c, o.identityOptions, o.regionOptions, &o.clientOptions),
+	}
 
 	for {
 		select {

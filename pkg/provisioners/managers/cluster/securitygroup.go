@@ -32,6 +32,7 @@ import (
 	"github.com/spjmurray/go-util/pkg/set"
 
 	unikornv1 "github.com/unikorn-cloud/compute/pkg/apis/unikorn/v1alpha1"
+	"github.com/unikorn-cloud/compute/pkg/provisioners/managers/cluster/util"
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
@@ -69,7 +70,7 @@ func (p *Provisioner) newSecurityGroupSet(ctx context.Context, client regionapi.
 	for i := range securityGroups {
 		securityGroup := &securityGroups[i]
 
-		poolName, err := getWorkloadPoolTag(securityGroup.Metadata.Tags)
+		poolName, err := util.GetWorkloadPoolTag(securityGroup.Metadata.Tags)
 		if err != nil {
 			return nil, err
 		}
