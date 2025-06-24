@@ -36,6 +36,7 @@ import (
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
+	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
 	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
@@ -96,7 +97,7 @@ func NewClient(client client.Client, namespace string, options *Options, identit
 }
 
 // List returns all clusters owned by the implicit control plane.
-func (c *Client) List(ctx context.Context, organizationID string) (openapi.ComputeClusters, error) {
+func (c *Client) List(ctx context.Context, organizationID string, params openapi.GetApiV1OrganizationsOrganizationIDClustersParams) (openapi.ComputeClusters, error) {
 	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
 	if err != nil {
 		return nil, errors.OAuth2ServerError("failed to build label selector").WithError(err)
@@ -114,6 +115,15 @@ func (c *Client) List(ctx context.Context, organizationID string) (openapi.Compu
 	if err := c.client.List(ctx, result, options); err != nil {
 		return nil, errors.OAuth2ServerError("failed to list clusters").WithError(err)
 	}
+
+	tagSelector, err := coreutil.DecodeTagSelectorParam(params.Tag)
+	if err != nil {
+		return nil, err
+	}
+
+	result.Items = slices.DeleteFunc(result.Items, func(resource unikornv1.ComputeCluster) bool {
+		return !resource.Spec.Tags.ContainsAll(tagSelector)
+	})
 
 	slices.SortStableFunc(result.Items, func(a, b unikornv1.ComputeCluster) int {
 		return strings.Compare(a.Name, b.Name)

@@ -255,6 +255,13 @@ type ComputeClustersResponse = ComputeClusters
 // CreateComputeClusterRequest Compute cluster create or update.
 type CreateComputeClusterRequest = ComputeClusterWrite
 
+// GetApiV1OrganizationsOrganizationIDClustersParams defines parameters for GetApiV1OrganizationsOrganizationIDClusters.
+type GetApiV1OrganizationsOrganizationIDClustersParams struct {
+	// Tag A set of tags to match against resources in the form "name=value",
+	// thus when encoded you get "?tag=foo%3Dcat&bar%3Ddog".
+	Tag *externalRef0.TagSelectorParameter `form:"tag,omitempty" json:"tag,omitempty"`
+}
+
 // PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersJSONRequestBody defines body for PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters for application/json ContentType.
 type PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersJSONRequestBody = ComputeClusterWrite
 

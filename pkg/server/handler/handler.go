@@ -169,10 +169,10 @@ func (h *Handler) clusterClient() *cluster.Client {
 	return cluster.NewClient(h.client, h.namespace, &h.options.Cluster, h.identity, h.region)
 }
 
-func (h *Handler) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter) {
+func (h *Handler) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, params openapi.GetApiV1OrganizationsOrganizationIDClustersParams) {
 	ctx := r.Context()
 
-	result, err := h.clusterClient().List(ctx, organizationID)
+	result, err := h.clusterClient().List(ctx, organizationID, params)
 	if err != nil {
 		errors.HandleError(w, r, err)
 		return

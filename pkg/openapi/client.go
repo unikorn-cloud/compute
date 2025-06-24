@@ -92,7 +92,7 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 	// GetApiV1OrganizationsOrganizationIDClusters request
-	GetApiV1OrganizationsOrganizationIDClusters(ctx context.Context, organizationID OrganizationIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetApiV1OrganizationsOrganizationIDClusters(ctx context.Context, organizationID OrganizationIDParameter, params *GetApiV1OrganizationsOrganizationIDClustersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersWithBody request with any body
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersWithBody(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -117,8 +117,8 @@ type ClientInterface interface {
 	GetApiV1OrganizationsOrganizationIDRegionsRegionIDImages(ctx context.Context, organizationID OrganizationIDParameter, regionID RegionIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) GetApiV1OrganizationsOrganizationIDClusters(ctx context.Context, organizationID OrganizationIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetApiV1OrganizationsOrganizationIDClustersRequest(c.Server, organizationID)
+func (c *Client) GetApiV1OrganizationsOrganizationIDClusters(ctx context.Context, organizationID OrganizationIDParameter, params *GetApiV1OrganizationsOrganizationIDClustersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiV1OrganizationsOrganizationIDClustersRequest(c.Server, organizationID, params)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func (c *Client) GetApiV1OrganizationsOrganizationIDRegionsRegionIDImages(ctx co
 }
 
 // NewGetApiV1OrganizationsOrganizationIDClustersRequest generates requests for GetApiV1OrganizationsOrganizationIDClusters
-func NewGetApiV1OrganizationsOrganizationIDClustersRequest(server string, organizationID OrganizationIDParameter) (*http.Request, error) {
+func NewGetApiV1OrganizationsOrganizationIDClustersRequest(server string, organizationID OrganizationIDParameter, params *GetApiV1OrganizationsOrganizationIDClustersParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -249,6 +249,28 @@ func NewGetApiV1OrganizationsOrganizationIDClustersRequest(server string, organi
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Tag != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "tag", runtime.ParamLocationQuery, *params.Tag); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
@@ -582,7 +604,7 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 	// GetApiV1OrganizationsOrganizationIDClustersWithResponse request
-	GetApiV1OrganizationsOrganizationIDClustersWithResponse(ctx context.Context, organizationID OrganizationIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDClustersResponse, error)
+	GetApiV1OrganizationsOrganizationIDClustersWithResponse(ctx context.Context, organizationID OrganizationIDParameter, params *GetApiV1OrganizationsOrganizationIDClustersParams, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDClustersResponse, error)
 
 	// PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersWithBodyWithResponse request with any body
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersWithBodyWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersResponse, error)
@@ -789,8 +811,8 @@ func (r GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesResponse) Status
 }
 
 // GetApiV1OrganizationsOrganizationIDClustersWithResponse request returning *GetApiV1OrganizationsOrganizationIDClustersResponse
-func (c *ClientWithResponses) GetApiV1OrganizationsOrganizationIDClustersWithResponse(ctx context.Context, organizationID OrganizationIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDClustersResponse, error) {
-	rsp, err := c.GetApiV1OrganizationsOrganizationIDClusters(ctx, organizationID, reqEditors...)
+func (c *ClientWithResponses) GetApiV1OrganizationsOrganizationIDClustersWithResponse(ctx context.Context, organizationID OrganizationIDParameter, params *GetApiV1OrganizationsOrganizationIDClustersParams, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDClustersResponse, error) {
+	rsp, err := c.GetApiV1OrganizationsOrganizationIDClusters(ctx, organizationID, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}

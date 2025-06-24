@@ -16,7 +16,7 @@ import (
 type ServerInterface interface {
 
 	// (GET /api/v1/organizations/{organizationID}/clusters)
-	GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter)
+	GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, params GetApiV1OrganizationsOrganizationIDClustersParams)
 
 	// (POST /api/v1/organizations/{organizationID}/projects/{projectID}/clusters)
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter)
@@ -42,7 +42,7 @@ type ServerInterface interface {
 type Unimplemented struct{}
 
 // (GET /api/v1/organizations/{organizationID}/clusters)
-func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter) {
+func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, params GetApiV1OrganizationsOrganizationIDClustersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -105,8 +105,19 @@ func (siw *ServerInterfaceWrapper) GetApiV1OrganizationsOrganizationIDClusters(w
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetApiV1OrganizationsOrganizationIDClustersParams
+
+	// ------------- Optional query parameter "tag" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "tag", r.URL.Query(), &params.Tag)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetApiV1OrganizationsOrganizationIDClusters(w, r, organizationID)
+		siw.Handler.GetApiV1OrganizationsOrganizationIDClusters(w, r, organizationID, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
