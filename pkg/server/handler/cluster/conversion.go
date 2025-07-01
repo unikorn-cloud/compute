@@ -32,7 +32,7 @@ import (
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
-	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
+	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -648,13 +648,8 @@ func (g *generator) generate(ctx context.Context, request *openapi.ComputeCluste
 		return nil, err
 	}
 
-	info, err := authorization.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	cluster := &unikornv1.ComputeCluster{
-		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, g.namespace, info.Userinfo.Sub).WithOrganization(g.organizationID).WithProject(g.projectID).Get(),
+	out := &unikornv1.ComputeCluster{
+		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, g.namespace).WithOrganization(g.organizationID).WithProject(g.projectID).Get(),
 		Spec: unikornv1.ComputeClusterSpec{
 			Tags:          conversion.GenerateTagList(request.Metadata.Tags),
 			RegionID:      request.Spec.RegionId,
@@ -663,5 +658,9 @@ func (g *generator) generate(ctx context.Context, request *openapi.ComputeCluste
 		},
 	}
 
-	return cluster, nil
+	if err := common.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
+		return nil, errors.OAuth2ServerError("failed to set identity metadata").WithError(err)
+	}
+
+	return out, nil
 }

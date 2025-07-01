@@ -39,6 +39,7 @@ import (
 	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
 	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
+	"github.com/unikorn-cloud/identity/pkg/principal"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -220,7 +221,12 @@ func (c *Client) createAllocation(ctx context.Context, organizationID, projectID
 		return nil, err
 	}
 
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsWithResponse(ctx, organizationID, projectID, *allocations)
+	principalOrganizationID, principalProjectID, err := principal.GetPrincipal(ctx, organizationID, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsWithResponse(ctx, principalOrganizationID, principalProjectID, *allocations)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +249,12 @@ func (c *Client) updateAllocation(ctx context.Context, organizationID, projectID
 		return err
 	}
 
-	resp, err := client.PutApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, resource.Annotations[constants.AllocationAnnotation], *allocations)
+	principalOrganizationID, principalProjectID, err := principal.GetPrincipal(ctx, organizationID, projectID)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.PutApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, principalOrganizationID, principalProjectID, resource.Annotations[constants.AllocationAnnotation], *allocations)
 	if err != nil {
 		return err
 	}
@@ -261,7 +272,12 @@ func (c *Client) deleteAllocation(ctx context.Context, organizationID, projectID
 		return err
 	}
 
-	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, allocationID)
+	principalOrganizationID, principalProjectID, err := principal.GetPrincipal(ctx, organizationID, projectID)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, principalOrganizationID, principalProjectID, allocationID)
 	if err != nil {
 		return err
 	}

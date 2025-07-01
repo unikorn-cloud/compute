@@ -29,6 +29,7 @@ import (
 	"github.com/unikorn-cloud/core/pkg/provisioners"
 	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
+	"github.com/unikorn-cloud/identity/pkg/principal"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
@@ -53,7 +54,7 @@ func (p *Provisioner) getRegionClient(ctx context.Context, traceName string) (re
 
 	getter := regionclient.New(cli, p.options.regionOptions, &p.options.clientOptions)
 
-	client, err := getter.Client(ctx, token)
+	client, err := getter.Client(ctx, token, principal.Injector(cli, &p.options.clientOptions, &p.cluster))
 	if err != nil {
 		return nil, err
 	}
