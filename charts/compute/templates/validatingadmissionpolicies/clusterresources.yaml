@@ -20,10 +20,14 @@ spec:
     message: Resource must contain a unikorn-cloud.org/name label
   - expression: "object.metadata.?labels[?'unikorn-cloud.org/organization'].orValue('') != ''"
     message: Resource must contain a unikorn-cloud.org/organization label
+  - expression: "oldObject == null || oldObject.metadata.?labels[?'principal.unikorn-cloud.org/organization'].orValue('') ==  object.metadata.?labels[?'principal.unikorn-cloud.org/organization'].orValue('')"
+    message: Resource principal/unikorn-cloud.org/organization label is immutable
   - expression: "object.metadata.?labels[?'unikorn-cloud.org/project'].orValue('') != ''"
     message: Resource must contain a unikorn-cloud.org/project label
   - expression: "object.metadata.?annotations[?'unikorn-cloud.org/identity-id'].orValue('') != ''"
     message: Resource must contain a unikorn-cloud.org/identity-id annotations
+  - expression: "oldObject == null || oldObject.metadata.?labels[?'principal.unikorn-cloud.org/project'].orValue('') ==  object.metadata.?labels[?'principal.unikorn-cloud.org/project'].orValue('')"
+    message: Resource principal/unikorn-cloud.org/project label is immutable
   - expression: "object.metadata.?annotations[?'unikorn-cloud.org/physical-network-id'].orValue('') != ''"
     message: Resource must contain a unikorn-cloud.org/physical-network-id annotations
   - expression: "object.metadata.?annotations[?'unikorn-cloud.org/allocation-id'].orValue('') != ''"

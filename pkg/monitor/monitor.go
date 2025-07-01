@@ -25,6 +25,7 @@ import (
 	clusterhealth "github.com/unikorn-cloud/compute/pkg/monitor/health/cluster"
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
+	"github.com/unikorn-cloud/identity/pkg/principal"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -68,6 +69,8 @@ type Checker interface {
 
 // Run sits in an infinite loop, polling every so often.
 func Run(ctx context.Context, c client.Client, o *Options) {
+	ctx = principal.NewContext(ctx, &principal.Principal{Actor: "compute-monitor"})
+
 	log := log.FromContext(ctx)
 
 	ticker := time.NewTicker(o.pollPeriod)

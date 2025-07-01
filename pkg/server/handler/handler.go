@@ -44,7 +44,7 @@ func regionClientGetter(issuer *identityclient.TokenIssuer, factory *regionclien
 			return nil, err
 		}
 
-		client, err := factory.Client(ctx, token)
+		client, err := factory.APIClient(ctx, token)
 		if err != nil {
 			return nil, err
 		}
@@ -60,7 +60,7 @@ func identityClientGetter(issuer *identityclient.TokenIssuer, factory *identityc
 			return nil, err
 		}
 
-		client, err := factory.Client(ctx, token)
+		client, err := factory.APIClient(ctx, token)
 		if err != nil {
 			return nil, err
 		}

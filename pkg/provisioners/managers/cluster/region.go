@@ -53,7 +53,7 @@ func (p *Provisioner) getRegionClient(ctx context.Context, traceName string) (re
 
 	getter := regionclient.New(cli, p.options.regionOptions, &p.options.clientOptions)
 
-	client, err := getter.Client(ctx, token)
+	client, err := getter.ControllerClient(ctx, token, &p.cluster)
 	if err != nil {
 		return nil, err
 	}
