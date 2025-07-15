@@ -41,8 +41,8 @@ const (
 )
 
 // ClusterTagSelector allows us to select only servers for a specific cluster.
-func ClusterTagSelector(cluster *unikornv1.ComputeCluster) *regionapi.TagSelectorParameter {
-	tags := regionapi.TagSelectorParameter{
+func ClusterTagSelector(cluster *unikornv1.ComputeCluster) *coreapi.TagSelectorParameter {
+	tags := coreapi.TagSelectorParameter{
 		coreconstants.ComputeClusterLabel + "=" + cluster.Name,
 	}
 

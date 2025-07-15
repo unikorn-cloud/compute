@@ -8,7 +8,7 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spjmurray/go-util v0.1.3
-	github.com/unikorn-cloud/core v1.3.1-0.20250624132623-54da83d2d518
+	github.com/unikorn-cloud/core v1.3.1-0.20250714141559-94709703eb78
 	github.com/unikorn-cloud/identity v1.3.0
 	github.com/unikorn-cloud/region v1.3.0
 	go.opentelemetry.io/otel/sdk v1.35.0
@@ -92,4 +92,9 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
+)
+
+replace (
+	github.com/unikorn-cloud/identity => ../identity
+	github.com/unikorn-cloud/region => ../region
 )

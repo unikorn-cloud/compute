@@ -80,7 +80,7 @@ func (c *Checker) getRegionClient(ctx context.Context) (regionapi.ClientWithResp
 
 	getter := regionclient.New(c.client, c.regionOptions, c.clientOptions)
 
-	client, err := getter.Client(ctx, token)
+	client, err := getter.APIClient(ctx, token)
 	if err != nil {
 		return nil, err
 	}
